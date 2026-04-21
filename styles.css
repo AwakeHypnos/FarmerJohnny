@@ -56,24 +56,31 @@ body.night-theme {
 
 /* 屏幕容器 */
 .screen {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
-    transition: opacity var(--transition-medium);
+    transition: opacity var(--transition-medium), visibility var(--transition-medium);
+    z-index: 1;
+    visibility: hidden;
+    overflow: hidden;
 }
 
 .screen.active {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
+    z-index: 10;
 }
 
 .screen.hidden {
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    position: absolute;
-    top: 0;
-    left: 0;
+    z-index: 1;
 }
 
 /* 主菜单样式 */
