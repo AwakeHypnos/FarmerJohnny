@@ -170,10 +170,23 @@ body.night-theme {
 #game-screen {
     background-color: var(--day-bg);
     transition: background-color var(--transition-medium);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
 }
 
 body.night-theme #game-screen {
     background-color: var(--night-bg);
+}
+
+/* 游戏主内容区域 */
+.game-main-content {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
 }
 
 /* 时间条样式 */
@@ -261,12 +274,13 @@ body.night-theme .time-indicator {
 /* 右上角功能区 */
 .top-right-panel {
     position: absolute;
-    top: 80px;
+    top: 1rem;
     right: 1rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
     z-index: 100;
+    pointer-events: auto;
 }
 
 .money-container {
@@ -335,6 +349,8 @@ body.night-theme .func-button {
     justify-content: center;
     align-items: center;
     position: relative;
+    width: 100%;
+    height: 100%;
 }
 
 .fields-container {
@@ -343,7 +359,10 @@ body.night-theme .func-button {
     grid-template-rows: repeat(3, 1fr);
     gap: 1.5rem;
     max-width: 600px;
+    max-height: 600px;
     width: 100%;
+    height: 100%;
+    aspect-ratio: 1;
 }
 
 .field {
