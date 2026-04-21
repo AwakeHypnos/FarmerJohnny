@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmerJohnny - 克苏鲁农场模拟</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 主菜单 -->
+        <div id="main-menu" class="screen active">
+            <div class="menu-container">
+                <h1 class="game-title">🌑 FarmerJohnny 🌑</h1>
+                <p class="game-subtitle">克苏鲁风格文字农场模拟</p>
+                <div class="menu-buttons">
+                    <button class="menu-button" id="start-game">开始游戏</button>
+                    <button class="menu-button" id="load-game">读取存档</button>
+                    <button class="menu-button" id="developer">开发人员</button>
+                </div>
+                <div class="dark-energy">
+                    <span class="energy-indicator">◈</span>
+                    <span class="energy-text">古老者的低语...</span>
+                    <span class="energy-indicator">◈</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏界面 -->
+        <div id="game-screen" class="screen hidden">
+            <!-- 顶部时间条 -->
+            <div class="time-bar-container">
+                <div class="time-labels">
+                    <span class="time-label day-label">昼</span>
+                    <span class="time-label night-label">夜</span>
+                </div>
+                <div class="time-bar">
+                    <div class="time-progress" id="time-progress"></div>
+                    <div class="time-indicator" id="time-indicator"></div>
+                </div>
+                <div class="time-info">
+                    <span id="current-season">季节: 春</span>
+                    <span id="current-day">第 1 天</span>
+                    <span id="current-time">时间: 00:00</span>
+                </div>
+            </div>
+
+            <!-- 右上角功能区 -->
+            <div class="top-right-panel">
+                <div class="money-container">
+                    <span class="money-label">💰 资金:</span>
+                    <span class="money-amount" id="money-display">1000</span>
+                </div>
+                <div class="function-buttons">
+                    <button class="func-button" id="backpack-btn">🎒 背包</button>
+                    <button class="func-button" id="merchant-btn">🧙 商人</button>
+                    <button class="func-button" id="market-btn">🏪 市场</button>
+                    <button class="func-button" id="warehouse-btn">📦 仓库</button>
+                </div>
+            </div>
+
+            <!-- 主游戏区域 - 田地 -->
+            <div class="game-area">
+                <div class="fields-container" id="fields-container">
+                    <!-- 田地格子将通过JavaScript动态生成 -->
+                </div>
+            </div>
+
+            <!-- 信息提示区 -->
+            <div class="info-panel" id="info-panel">
+                <div class="info-content" id="info-content">
+                    欢迎来到克苏鲁农场！点击田地开始种植。
+                </div>
+            </div>
+        </div>
+
+        <!-- 背包弹窗 -->
+        <div id="backpack-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🎒 背包</h2>
+                    <button class="close-btn" id="close-backpack">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="inventory-tabs">
+                        <button class="tab-button active" data-tab="seeds">种子</button>
+                        <button class="tab-button" data-tab="crops">作物</button>
+                        <button class="tab-button" data-tab="items">物品</button>
+                    </div>
+                    <div class="inventory-content" id="backpack-content">
+                        <!-- 背包内容将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 商人弹窗 -->
+        <div id="merchant-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🧙 商人</h2>
+                    <button class="close-btn" id="close-merchant">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="merchant-tabs">
+                        <button class="tab-button active" data-tab="merchant-seeds">当季种子</button>
+                        <button class="tab-button" data-tab="merchant-fertilizer">肥料</button>
+                    </div>
+                    <div class="merchant-content" id="merchant-content">
+                        <!-- 商人商品将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 市场弹窗 -->
+        <div id="market-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🏪 市场</h2>
+                    <button class="close-btn" id="close-market">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="market-content" id="market-content">
+                        <!-- 市场内容将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 仓库弹窗 -->
+        <div id="warehouse-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📦 仓库</h2>
+                    <button class="close-btn" id="close-warehouse">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="warehouse-content" id="warehouse-content">
+                        <!-- 仓库内容将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 开发人员弹窗 -->
+        <div id="developer-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>👨‍💻 开发人员</h2>
+                    <button class="close-btn" id="close-developer">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="developer-content">
+                        <p>FarmerJohnny - 克苏鲁风格文字农场模拟</p>
+                        <p>版本: 1.0.0</p>
+                        <p>开发人员: Solo Coder</p>
+                        <p>感谢游玩！</p>
+                        <div class="dark-energy">
+                            <span class="energy-indicator">◈</span>
+                            <span class="energy-text">Ph'nglui mglw'nafh Cthulhu R'lyeh wgah'nagl fhtagn</span>
+                            <span class="energy-indicator">◈</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
