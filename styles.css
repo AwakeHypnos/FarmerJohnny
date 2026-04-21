@@ -1,0 +1,826 @@
+/* 基础样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* 根变量定义 */
+:root {
+    /* 日间主题 */
+    --day-bg: #f0f4f8;
+    --day-primary: #2d5016;
+    --day-secondary: #4a7c23;
+    --day-accent: #8bc34a;
+    --day-text: #1a1a1a;
+    --day-card-bg: #ffffff;
+    --day-border: #d1d5db;
+    --day-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    
+    /* 夜间主题（克苏鲁风格） */
+    --night-bg: #0a0e17;
+    --night-primary: #1a2a3a;
+    --night-secondary: #2a4a5a;
+    --night-accent: #7a9a8a;
+    --night-text: #c0c8d0;
+    --night-card-bg: #141a24;
+    --night-border: #2a3a4a;
+    --night-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    
+    /* 克苏鲁主题色 */
+    --cthulhu-green: #1a3a2a;
+    --cthulhu-purple: #2a1a3a;
+    --cthulhu-teal: #1a3a3a;
+    --cthulhu-gold: #8a7a3a;
+    
+    /* 过渡动画 */
+    --transition-fast: 0.2s ease;
+    --transition-medium: 0.5s ease;
+    --transition-slow: 1s ease;
+}
+
+/* 基础样式 */
+body {
+    font-family: 'Courier New', monospace;
+    background-color: var(--day-bg);
+    color: var(--day-text);
+    transition: background-color var(--transition-medium), color var(--transition-medium);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+body.night-theme {
+    background-color: var(--night-bg);
+    color: var(--night-text);
+}
+
+/* 屏幕容器 */
+.screen {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: opacity var(--transition-medium);
+}
+
+.screen.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* 主菜单样式 */
+#main-menu {
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, var(--cthulhu-green) 0%, var(--cthulhu-purple) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+#main-menu::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 80%, rgba(122, 154, 138, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(138, 122, 58, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.menu-container {
+    text-align: center;
+    z-index: 10;
+    padding: 2rem;
+}
+
+.game-title {
+    font-size: 3rem;
+    color: #c0c8d0;
+    text-shadow: 0 0 10px rgba(122, 154, 138, 0.5);
+    margin-bottom: 1rem;
+    letter-spacing: 0.1em;
+}
+
+.game-subtitle {
+    font-size: 1.2rem;
+    color: #a0a8b0;
+    margin-bottom: 3rem;
+    font-style: italic;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.menu-button {
+    background: linear-gradient(135deg, var(--cthulhu-teal) 0%, var(--cthulhu-green) 100%);
+    color: #c0c8d0;
+    border: 2px solid var(--night-border);
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: var(--night-shadow);
+}
+
+.menu-button:hover {
+    background: linear-gradient(135deg, var(--cthulhu-green) 0%, var(--cthulhu-teal) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    border-color: var(--cthulhu-gold);
+}
+
+.menu-button:active {
+    transform: translateY(0);
+}
+
+.dark-energy {
+    margin-top: 3rem;
+    font-size: 0.9rem;
+    color: #7a9a8a;
+    font-style: italic;
+    opacity: 0.7;
+}
+
+.energy-indicator {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+/* 游戏界面样式 */
+#game-screen {
+    background-color: var(--day-bg);
+    transition: background-color var(--transition-medium);
+}
+
+body.night-theme #game-screen {
+    background-color: var(--night-bg);
+}
+
+/* 时间条样式 */
+.time-bar-container {
+    background-color: var(--day-card-bg);
+    padding: 1rem;
+    border-bottom: 1px solid var(--day-border);
+    transition: background-color var(--transition-medium), border-color var(--transition-medium);
+    position: relative;
+    z-index: 100;
+}
+
+body.night-theme .time-bar-container {
+    background-color: var(--night-card-bg);
+    border-color: var(--night-border);
+}
+
+.time-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.time-label {
+    font-weight: bold;
+}
+
+.day-label {
+    color: var(--day-primary);
+}
+
+.night-label {
+    color: var(--cthulhu-purple);
+}
+
+.time-bar {
+    position: relative;
+    height: 12px;
+    background: linear-gradient(90deg, 
+        #8bc34a 0%, 
+        #ffeb3b 25%, 
+        #ff9800 50%, 
+        #673ab7 75%, 
+        #3a1a4a 100%);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.time-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    transition: width 0.1s linear;
+}
+
+.time-indicator {
+    position: absolute;
+    top: -4px;
+    width: 20px;
+    height: 20px;
+    background: var(--day-text);
+    border-radius: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 10px var(--day-text);
+    transition: left 0.1s linear, background-color var(--transition-medium);
+}
+
+body.night-theme .time-indicator {
+    background: var(--night-text);
+    box-shadow: 0 0 10px var(--night-text);
+}
+
+.time-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* 右上角功能区 */
+.top-right-panel {
+    position: absolute;
+    top: 80px;
+    right: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    z-index: 100;
+}
+
+.money-container {
+    background-color: var(--day-card-bg);
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--day-border);
+    box-shadow: var(--day-shadow);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color var(--transition-medium), border-color var(--transition-medium), box-shadow var(--transition-medium);
+}
+
+body.night-theme .money-container {
+    background-color: var(--night-card-bg);
+    border-color: var(--night-border);
+    box-shadow: var(--night-shadow);
+}
+
+.money-label {
+    font-weight: bold;
+}
+
+.money-amount {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--cthulhu-gold);
+}
+
+.function-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.func-button {
+    background-color: var(--day-card-bg);
+    color: var(--day-text);
+    border: 1px solid var(--day-border);
+    padding: 0.75rem 1.25rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border-radius: 6px;
+    text-align: left;
+}
+
+body.night-theme .func-button {
+    background-color: var(--night-card-bg);
+    color: var(--night-text);
+    border-color: var(--night-border);
+}
+
+.func-button:hover {
+    transform: translateX(-4px);
+    border-color: var(--cthulhu-gold);
+}
+
+/* 主游戏区域 - 田地 */
+.game-area {
+    flex: 1;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.fields-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 1.5rem;
+    max-width: 600px;
+    width: 100%;
+}
+
+.field {
+    aspect-ratio: 1;
+    background-color: var(--day-card-bg);
+    border: 2px solid var(--day-border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+}
+
+body.night-theme .field {
+    background-color: var(--night-card-bg);
+    border-color: var(--night-border);
+}
+
+.field:hover {
+    transform: scale(1.05);
+    border-color: var(--cthulhu-gold);
+}
+
+.field.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: repeating-linear-gradient(
+        45deg,
+        var(--day-card-bg),
+        var(--day-card-bg) 10px,
+        var(--day-border) 10px,
+        var(--day-border) 20px
+    );
+}
+
+body.night-theme .field.locked {
+    background: repeating-linear-gradient(
+        45deg,
+        var(--night-card-bg),
+        var(--night-card-bg) 10px,
+        var(--night-border) 10px,
+        var(--night-border) 20px
+    );
+}
+
+.field-content {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    z-index: 2;
+}
+
+.plant-name {
+    font-size: 1.2rem;
+    margin-top: 0.5rem;
+}
+
+/* 植物生长特效 */
+.plant-breathing {
+    animation: breathing 2s infinite ease-in-out;
+}
+
+@keyframes breathing {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 0.8;
+    }
+}
+
+.plant-growing {
+    animation: growing 0.5s ease-out;
+}
+
+@keyframes growing {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 田地状态指示器 */
+.field-status {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    right: 5px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.water-indicator,
+.fertilizer-indicator {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.water-indicator::before {
+    content: '💧';
+}
+
+.fertilizer-indicator::before {
+    content: '🌱';
+}
+
+/* 信息提示区 */
+.info-panel {
+    background-color: var(--day-card-bg);
+    padding: 1rem;
+    border-top: 1px solid var(--day-border);
+    transition: background-color var(--transition-medium), border-color var(--transition-medium);
+}
+
+body.night-theme .info-panel {
+    background-color: var(--night-card-bg);
+    border-color: var(--night-border);
+}
+
+.info-content {
+    text-align: center;
+    font-size: 1rem;
+}
+
+/* 模态框样式 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast);
+}
+
+.modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background-color: var(--day-card-bg);
+    border-radius: 8px;
+    border: 2px solid var(--day-border);
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    transition: background-color var(--transition-medium), border-color var(--transition-medium);
+}
+
+body.night-theme .modal-content {
+    background-color: var(--night-card-bg);
+    border-color: var(--night-border);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--day-border);
+}
+
+body.night-theme .modal-header {
+    border-color: var(--night-border);
+}
+
+.modal-header h2 {
+    font-size: 1.3rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: inherit;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    transition: background-color var(--transition-fast);
+}
+
+.close-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+body.night-theme .close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.modal-body {
+    padding: 1rem 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* 选项卡样式 */
+.inventory-tabs,
+.merchant-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--day-border);
+    padding-bottom: 0.5rem;
+}
+
+body.night-theme .inventory-tabs,
+body.night-theme .merchant-tabs {
+    border-color: var(--night-border);
+}
+
+.tab-button {
+    background: none;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-radius: 4px 4px 0 0;
+    transition: all var(--transition-fast);
+    opacity: 0.7;
+}
+
+.tab-button.active {
+    opacity: 1;
+    background-color: var(--day-border);
+}
+
+body.night-theme .tab-button.active {
+    background-color: var(--night-border);
+}
+
+.tab-button:hover {
+    opacity: 1;
+}
+
+/* 物品列表样式 */
+.inventory-content,
+.merchant-content,
+.market-content,
+.warehouse-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.item-card {
+    background-color: var(--day-bg);
+    border: 1px solid var(--day-border);
+    border-radius: 6px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+body.night-theme .item-card {
+    background-color: var(--night-bg);
+    border-color: var(--night-border);
+}
+
+.item-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--cthulhu-gold);
+}
+
+.item-card.selected {
+    border-color: var(--cthulhu-gold);
+    box-shadow: 0 0 10px rgba(138, 122, 58, 0.3);
+}
+
+.item-name {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.item-info {
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.item-count {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: var(--cthulhu-gold);
+    color: var(--day-text);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+/* 商人价格标签 */
+.item-price {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--cthulhu-gold);
+    font-weight: bold;
+}
+
+/* 开发人员内容 */
+.developer-content {
+    text-align: center;
+    line-height: 1.8;
+}
+
+.developer-content .dark-energy {
+    margin-top: 2rem;
+    font-size: 0.8rem;
+}
+
+/* 操作按钮样式 */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    justify-content: center;
+}
+
+.action-btn {
+    background-color: var(--day-bg);
+    border: 1px solid var(--day-border);
+    color: var(--day-text);
+    padding: 0.5rem 1rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+}
+
+body.night-theme .action-btn {
+    background-color: var(--night-bg);
+    border-color: var(--night-border);
+    color: var(--night-text);
+}
+
+.action-btn:hover {
+    border-color: var(--cthulhu-gold);
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 成熟植物高亮 */
+.ready-to-harvest {
+    border-color: var(--cthulhu-gold) !important;
+    box-shadow: 0 0 15px rgba(138, 122, 58, 0.5);
+}
+
+.ready-to-harvest .plant-name {
+    color: var(--cthulhu-gold);
+    animation: pulse 1s infinite;
+}
+
+/* 提示消息样式 */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--day-card-bg);
+    color: var(--day-text);
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    border: 1px solid var(--day-border);
+    box-shadow: var(--day-shadow);
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-fast);
+}
+
+body.night-theme .toast {
+    background-color: var(--night-card-bg);
+    border-color: var(--night-border);
+    box-shadow: var(--night-shadow);
+    color: var(--night-text);
+}
+
+.toast.show {
+    opacity: 1;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .game-title {
+        font-size: 2rem;
+    }
+    
+    .fields-container {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    
+    .top-right-panel {
+        position: static;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 1rem;
+        margin-top: 1rem;
+    }
+    
+    .function-buttons {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .func-button {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .inventory-content,
+    .merchant-content,
+    .market-content,
+    .warehouse-content {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .fields-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        gap: 1rem;
+    }
+    
+    .field {
+        aspect-ratio: 2/1;
+    }
+    
+    .top-right-panel {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .function-buttons {
+        justify-content: center;
+    }
+}
