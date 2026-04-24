@@ -398,8 +398,8 @@ body.night-theme .field {
 }
 
 .field.locked {
-    opacity: 0.7;
-    cursor: pointer;
+    opacity: 0.5;
+    cursor: not-allowed;
     background: repeating-linear-gradient(
         45deg,
         var(--day-card-bg),
@@ -407,11 +407,6 @@ body.night-theme .field {
         var(--day-border) 10px,
         var(--day-border) 20px
     );
-}
-
-.field.locked:hover {
-    opacity: 1;
-    border-color: var(--cthulhu-gold);
 }
 
 body.night-theme .field.locked {
@@ -429,22 +424,6 @@ body.night-theme .field.locked {
     font-size: 1.5rem;
     font-weight: bold;
     z-index: 2;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
-
-.locked-text {
-    font-size: 1.2rem;
-    opacity: 0.8;
-}
-
-.unlock-price {
-    font-size: 0.9rem;
-    margin-top: 0.5rem;
-    color: var(--cthulhu-gold);
-    font-weight: bold;
 }
 
 .plant-name {
@@ -452,12 +431,9 @@ body.night-theme .field.locked {
     margin-top: 0.5rem;
 }
 
-/* 植物生长特效 - 呼吸+字体大小变化 */
+/* 植物生长特效 */
 .plant-breathing {
     animation: breathing 2s infinite ease-in-out;
-    /* 基础字体大小，根据生长进度动态调整 */
-    font-size: calc(1rem + var(--growth-percent, 0) * 0.02rem);
-    transition: font-size 0.3s ease;
 }
 
 @keyframes breathing {
@@ -466,8 +442,8 @@ body.night-theme .field.locked {
         opacity: 1;
     }
     50% {
-        transform: scale(1.1);
-        opacity: 0.85;
+        transform: scale(1.15);
+        opacity: 0.8;
     }
 }
 
@@ -503,6 +479,14 @@ body.night-theme .field.locked {
     display: flex;
     align-items: center;
     gap: 2px;
+}
+
+.water-indicator::before {
+    content: '💧';
+}
+
+.fertilizer-indicator::before {
+    content: '🌱';
 }
 
 /* 信息提示区 */
