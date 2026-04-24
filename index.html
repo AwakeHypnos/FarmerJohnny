@@ -11,7 +11,7 @@
         <!-- 主菜单 -->
         <div id="main-menu" class="screen active">
             <div class="menu-container">
-                <h1 class="game-title">FarmerJohnny</h1>
+                <h1 class="game-title">🌑 FarmerJohnny 🌑</h1>
                 <p class="game-subtitle">克苏鲁风格文字农场模拟</p>
                 <div class="menu-buttons">
                     <button class="menu-button" id="start-game">开始游戏</button>
@@ -50,14 +50,14 @@
                 <!-- 右上角功能区 -->
                 <div class="top-right-panel">
                     <div class="money-container">
-                        <span class="money-label">资金:</span>
+                        <span class="money-label">💰 资金:</span>
                         <span class="money-amount" id="money-display">1000</span>
                     </div>
                     <div class="function-buttons">
-                        <button class="func-button" id="backpack-btn">背包</button>
-                        <button class="func-button" id="merchant-btn">商人</button>
-                        <button class="func-button" id="market-btn">市场</button>
-                        <button class="func-button" id="warehouse-btn">仓库</button>
+                        <button class="func-button" id="backpack-btn">🎒 背包</button>
+                        <button class="func-button" id="merchant-btn">🧙 商人</button>
+                        <button class="func-button" id="market-btn">🏪 市场</button>
+                        <button class="func-button" id="warehouse-btn">📦 仓库</button>
                     </div>
                 </div>
 
@@ -81,12 +81,13 @@
         <div id="backpack-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>背包</h2>
+                    <h2>🎒 背包</h2>
                     <button class="close-btn" id="close-backpack">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="inventory-tabs">
                         <button class="tab-button active" data-tab="seeds">种子</button>
+                        <button class="tab-button" data-tab="crops">作物</button>
                         <button class="tab-button" data-tab="items">物品</button>
                     </div>
                     <div class="inventory-content" id="backpack-content">
@@ -100,7 +101,7 @@
         <div id="merchant-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>商人</h2>
+                    <h2>🧙 商人</h2>
                     <button class="close-btn" id="close-merchant">×</button>
                 </div>
                 <div class="modal-body">
@@ -119,7 +120,7 @@
         <div id="market-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>市场</h2>
+                    <h2>🏪 市场</h2>
                     <button class="close-btn" id="close-market">×</button>
                 </div>
                 <div class="modal-body">
@@ -134,7 +135,7 @@
         <div id="warehouse-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>仓库</h2>
+                    <h2>📦 仓库</h2>
                     <button class="close-btn" id="close-warehouse">×</button>
                 </div>
                 <div class="modal-body">
@@ -149,7 +150,7 @@
         <div id="developer-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>开发人员</h2>
+                    <h2>👨‍💻 开发人员</h2>
                     <button class="close-btn" id="close-developer">×</button>
                 </div>
                 <div class="modal-body">
@@ -169,6 +170,30 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="js/data/config/PlantConfig.js"></script>
+    <script src="js/data/config/FertilizerConfig.js"></script>
+    
+    <script src="js/utils/EventBus.js"></script>
+    <script src="js/utils/Timer.js"></script>
+    <script src="js/utils/Logger.js"></script>
+    <script src="js/utils/Utils.js"></script>
+    
+    <script src="js/data/modules/TimeModule.js"></script>
+    <script src="js/data/modules/EnvironmentModule.js"></script>
+    <script src="js/data/GameState.js"></script>
+    <script src="js/data/SaveManager.js"></script>
+    
+    <script src="js/layers/business/core/FarmingModule.js"></script>
+    <script src="js/layers/business/core/EconomyModule.js"></script>
+    
+    <script src="js/layers/control/EventBinder.js"></script>
+    <script src="js/layers/control/InputHandler.js"></script>
+    <script src="js/layers/control/InteractionManager.js"></script>
+    
+    <script src="js/layers/presentation/AnimationManager.js"></script>
+    <script src="js/layers/presentation/EffectManager.js"></script>
+    <script src="js/layers/presentation/UIRenderer.js"></script>
+    
+    <script src="js/main.js"></script>
 </body>
 </html>
