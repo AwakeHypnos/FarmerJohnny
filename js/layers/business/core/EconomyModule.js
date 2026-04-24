@@ -25,7 +25,8 @@ class EconomyModule {
         const PlantConfig = window.PlantConfig || {};
         const fluctuation = 0.2;
 
-        for (const [plantType, plantData] of Object.entries(PlantConfig)) {
+        const plants = PlantConfig.getAllPlants ? PlantConfig.getAllPlants() : PlantConfig;
+        for (const [plantType, plantData] of Object.entries(plants)) {
             if (typeof plantData === 'object' && plantData.sellPrice) {
                 const basePrice = plantData.sellPrice;
                 const randomFactor = 1 + (Math.random() * fluctuation * 2 - fluctuation);
@@ -54,7 +55,8 @@ class EconomyModule {
         const PlantConfig = window.PlantConfig || {};
         const prices = [];
 
-        for (const [plantType, plantData] of Object.entries(PlantConfig)) {
+        const plants = PlantConfig.getAllPlants ? PlantConfig.getAllPlants() : PlantConfig;
+        for (const [plantType, plantData] of Object.entries(plants)) {
             if (typeof plantData === 'object' && plantData.sellPrice) {
                 const priceData = this.getMarketPrice(plantType);
                 if (priceData) {
