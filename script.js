@@ -671,6 +671,9 @@ class FarmerJohnnyGame {
                 this.gameState.day++;
                 
                 // 新的一天开始
+                // 每日06:00刷新浇水状态
+                this.resetDailyFieldStates();
+                
                 // 刷新每日市场
                 this.refreshDailyMarket();
                 

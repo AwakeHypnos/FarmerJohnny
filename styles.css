@@ -7,31 +7,31 @@
 
 /* 根变量定义 */
 :root {
-    /* 日间主题（克苏鲁风格蓝绿色系） */
-    --day-bg: #0f1c26;
-    --day-primary: #1a4a5a;
-    --day-secondary: #2a6a7a;
-    --day-accent: #3a8a9a;
-    --day-text: #d0e0e8;
-    --day-card-bg: #162a36;
-    --day-border: #2a4a5a;
-    --day-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    /* 日间主题 */
+    --day-bg: #f0f4f8;
+    --day-primary: #2d5016;
+    --day-secondary: #4a7c23;
+    --day-accent: #8bc34a;
+    --day-text: #1a1a1a;
+    --day-card-bg: #ffffff;
+    --day-border: #d1d5db;
+    --day-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     
-    /* 夜间主题（克苏鲁风格蓝黑色系） */
-    --night-bg: #050a10;
-    --night-primary: #0f1a26;
-    --night-secondary: #1a2a36;
-    --night-accent: #2a4a5a;
-    --night-text: #a0b0c0;
-    --night-card-bg: #0d161e;
-    --night-border: #1a2a36;
-    --night-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+    /* 夜间主题（克苏鲁风格） */
+    --night-bg: #0a0e17;
+    --night-primary: #1a2a3a;
+    --night-secondary: #2a4a5a;
+    --night-accent: #7a9a8a;
+    --night-text: #c0c8d0;
+    --night-card-bg: #141a24;
+    --night-border: #2a3a4a;
+    --night-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     
     /* 克苏鲁主题色 */
-    --cthulhu-green: #1a4a3a;
-    --cthulhu-purple: #2a1a4a;
-    --cthulhu-teal: #1a4a4a;
-    --cthulhu-gold: #a89a4a;
+    --cthulhu-green: #1a3a2a;
+    --cthulhu-purple: #2a1a3a;
+    --cthulhu-teal: #1a3a3a;
+    --cthulhu-gold: #8a7a3a;
     
     /* 过渡动画 */
     --transition-fast: 0.2s ease;
