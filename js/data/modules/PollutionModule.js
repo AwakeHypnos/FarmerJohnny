@@ -9,6 +9,17 @@ class PollutionModule {
         this.setupListeners();
     }
 
+    init() {
+        this.gameState.state.pollution = 0;
+        this.activeEvents = [];
+        this.eventBus.emit('pollution:changed', {
+            oldValue: 0,
+            newValue: 0,
+            change: 0,
+            reason: '初始化污染值'
+        });
+    }
+
     setupListeners() {
         this.eventBus.on('time:newDay', () => {
             this.processDailyPollutionEffects();

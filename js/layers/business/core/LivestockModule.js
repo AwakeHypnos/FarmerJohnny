@@ -12,6 +12,13 @@ class LivestockModule {
         this.setupListeners();
     }
 
+    init() {
+        this.wildAnimals = [];
+        this.maxWildAnimals = 3;
+        this.gameState.state.livestock.animals = [];
+        this.gameState.state.livestock.barnLevel = 1;
+    }
+
     setupListeners() {
         this.eventBus.on('time:hourChanged', () => {
             this.trySpawnWildAnimal();
@@ -42,6 +49,37 @@ class LivestockModule {
 
     getWildAnimals() {
         return [...this.wildAnimals];
+    }
+
+    getAnimals() {
+        return this.gameState.getAnimals();
+    }
+
+    getAnimal(animalId) {
+        return this.gameState.getAnimal(animalId);
+    }
+
+    getAnimalCount() {
+        return this.gameState.getAnimalCount();
+    }
+
+    getBarnLevel() {
+        return this.gameState.getBarnLevel();
+    }
+
+    getBarnCapacity() {
+        return this.gameState.getBarnCapacity();
+    }
+
+    getUpgradeCost() {
+        const AnimalConfig = window.AnimalConfig || {};
+        const currentLevel = this.getBarnLevel();
+        const nextLevel = currentLevel + 1;
+        const upgradeData = AnimalConfig.getBarnUpgrade ? 
+            AnimalConfig.getBarnUpgrade(nextLevel) : 
+            (AnimalConfig._barnUpgrades ? AnimalConfig._barnUpgrades[nextLevel] : null);
+        
+        return upgradeData ? upgradeData.upgradeCost : null;
     }
 
     trySpawnWildAnimal() {
@@ -316,6 +354,96 @@ class LivestockModule {
         }
 
         return result;
+    }
+
+    getTimeUntilProduct(animalIndex) {
+        const animals = this.gameState.getAnimals();
+        const animal = animals[animalIndex];
+        
+        if (!animal) return '未知';
+        
+        const AnimalConfig = window.AnimalConfig || {};
+        const animalData = AnimalConfig.getDomesticAnimal ? 
+            AnimalConfig.getDomesticAnimal(animal.type) : 
+            (AnimalConfig._domesticAnimals ? AnimalConfig._domesticAnimals[animal.type] : null) ||
+            (AnimalConfig._tabooAnimals ? AnimalConfig._tabooAnimals[animal.type] : null);
+        
+        if (!animalData) return '未知';
+        
+        const produceIntervalMinutes = animalData.produceInterval * 60;
+        const remainingMinutes = Math.max(0, produceIntervalMinutes - animal.produceTimer);
+        
+        if (remainingMinutes <= 0) {
+            return '已就绪';
+        }
+        
+        const hours = Math.floor(remainingMinutes / 60);
+        const minutes = Math.floor(remainingMinutes % 60);
+        
+        if (hours > 0) {
+            return `${hours}小时${minutes}分钟`;
+        }
+        return `${minutes}分钟`;
+    }
+
+    collectProduct(animalId) {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animals = this.gameState.getAnimals();
+        const animal = animals.find(a => a.id === animalId);
+        
+        if (!animal) {
+            return { success: false, reason: '动物不存在' };
+        }
+        
+        const animalData = AnimalConfig.getDomesticAnimal ? 
+            AnimalConfig.getDomesticAnimal(animal.type) : 
+            (AnimalConfig._domesticAnimals ? AnimalConfig._domesticAnimals[animal.type] : null) ||
+            (AnimalConfig._tabooAnimals ? AnimalConfig._tabooAnimals[animal.type] : null);
+        
+        if (!animalData) {
+            return { success: false, reason: '动物数据无效' };
+        }
+        
+        const produceIntervalMinutes = animalData.produceInterval * 60;
+        if (animal.produceTimer < produceIntervalMinutes) {
+            return { success: false, reason: '产品还未就绪' };
+        }
+        
+        animal.produceTimer = 0;
+        
+        if (animalData.produceType) {
+            const minAmount = animalData.produceAmount[0] || 1;
+            const maxAmount = animalData.produceAmount[1] || 1;
+            const amount = Math.floor(Math.random() * (maxAmount - minAmount + 1)) + minAmount;
+            
+            for (let i = 0; i < amount; i++) {
+                const result = this.gameState.addAnimalProduct(animalData.produceType);
+                if (!result.success) {
+                    this.gameState.addWarehouseAnimalProduct(animalData.produceType);
+                }
+            }
+            
+            const product = AnimalConfig.getAnimalProduct ? 
+                AnimalConfig.getAnimalProduct(animalData.produceType) : null;
+            
+            const productName = product ? product.name : animalData.produceType;
+            
+            this.eventBus.emit('livestock:animalProduced', {
+                animal: animal,
+                product: animalData.produceType,
+                productName: productName,
+                amount: amount
+            });
+            
+            return { 
+                success: true, 
+                product: animalData.produceType, 
+                productName: productName, 
+                amount: amount 
+            };
+        }
+        
+        return { success: false, reason: '该动物不产出产品' };
     }
 
     getBarnInfo() {
