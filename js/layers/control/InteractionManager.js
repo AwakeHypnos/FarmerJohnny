@@ -1,8 +1,11 @@
 class InteractionManager {
-    constructor(eventBus, farmingModule, economyModule, uiRenderer) {
+    constructor(eventBus, farmingModule, economyModule, sanityModule, pollutionModule, livestockModule, uiRenderer) {
         this.eventBus = eventBus;
         this.farmingModule = farmingModule;
         this.economyModule = economyModule;
+        this.sanityModule = sanityModule;
+        this.pollutionModule = pollutionModule;
+        this.livestockModule = livestockModule;
         this.uiRenderer = uiRenderer;
 
         this.currentFieldActions = null;
@@ -62,6 +65,15 @@ class InteractionManager {
             this.uiRenderer.hideModal('warehouse');
         });
 
+        this.eventBus.on('input:showLog', () => {
+            this.uiRenderer.showModal('log');
+            this.uiRenderer.renderLogContent();
+        });
+
+        this.eventBus.on('input:hideLog', () => {
+            this.uiRenderer.hideModal('log');
+        });
+
         this.eventBus.on('input:backpackTabChanged', (tabType) => {
             this.uiRenderer.renderBackpackContent(tabType);
         });
@@ -85,6 +97,126 @@ class InteractionManager {
         this.eventBus.on('farming:error', (data) => {
             this.uiRenderer.showInfo(data.message);
         });
+
+        this.eventBus.on('farming:showUnlockOption', (data) => {
+            this.showUnlockOption(data);
+        });
+
+        this.eventBus.on('farming:fieldUnlocked', (data) => {
+            this.uiRenderer.showInfo(`田地解锁成功！花费了 ${data.price} 金币。`);
+            this.uiRenderer.renderFields();
+        });
+
+        this.eventBus.on('input:switchToFields', () => {
+            this.eventBus.emit('ui:switchToFields');
+        });
+
+        this.eventBus.on('input:switchToBarn', () => {
+            this.eventBus.emit('ui:switchToBarn');
+        });
+
+        this.eventBus.on('input:upgradeBarn', () => {
+            this.handleUpgradeBarn();
+        });
+
+        this.eventBus.on('livestock:collectProduct', (animalId) => {
+            this.handleCollectProduct(animalId);
+        });
+
+        this.eventBus.on('ui:seedSelected', (seedType) => {
+            this.handleSeedSelect(seedType);
+        });
+
+        this.eventBus.on('ui:buySeed', (seedType) => {
+            this.handleBuySeed(seedType);
+        });
+
+        this.eventBus.on('ui:buyFertilizer', (fertilizerType) => {
+            this.handleBuyFertilizer(fertilizerType);
+        });
+
+        this.eventBus.on('ui:sellCrop', (cropType) => {
+            this.handleSellCrop(cropType);
+        });
+
+        this.eventBus.on('ui:moveFromWarehouse', (data) => {
+            this.handleMoveFromWarehouse(data.itemType, data.category);
+        });
+    }
+
+    handleUpgradeBarn() {
+        if (!this.livestockModule) return;
+        const result = this.livestockModule.upgradeBarn();
+        if (!result.success) {
+            this.uiRenderer.showInfo(result.reason, 'warning');
+        }
+    }
+
+    handleCollectProduct(animalId) {
+        if (!this.livestockModule) return;
+        const result = this.livestockModule.collectProduct(animalId);
+        if (result.success) {
+            this.uiRenderer.showInfo(`收集了${result.productName}×${result.amount}！`, 'success');
+            this.uiRenderer.renderBarn();
+        } else {
+            this.uiRenderer.showInfo(result.reason, 'warning');
+        }
+    }
+
+    showUnlockOption(data) {
+        this.removeFieldActions();
+        
+        const fieldElement = document.querySelector(`[data-field-id="${data.fieldId}"]`);
+        if (!fieldElement) return;
+
+        const actionContainer = document.createElement('div');
+        actionContainer.className = 'action-buttons field-action-buttons unlock-options';
+        actionContainer.style.marginTop = '0.5rem';
+
+        const price = data.price;
+        const priceText = data.canUnlock 
+            ? `解锁此田地需要 ${price} 金币` 
+            : data.reason;
+
+        const unlockBtn = this.createActionButton(
+            `解锁田地 (${price}金币)`, 
+            data.canUnlock, 
+            () => {
+                this.handleUnlockField(data.fieldId);
+                actionContainer.remove();
+            }
+        );
+
+        actionContainer.appendChild(unlockBtn);
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'unlock-info';
+        infoDiv.style.fontSize = '0.8rem';
+        infoDiv.style.opacity = '0.7';
+        infoDiv.style.marginTop = '0.5rem';
+        infoDiv.style.textAlign = 'center';
+        infoDiv.textContent = priceText;
+        actionContainer.appendChild(infoDiv);
+
+        fieldElement.appendChild(actionContainer);
+        this.currentFieldActions = actionContainer;
+
+        setTimeout(() => {
+            const removeHandler = (e) => {
+                if (!fieldElement.contains(e.target)) {
+                    actionContainer.remove();
+                    document.removeEventListener('click', removeHandler);
+                }
+            };
+            document.addEventListener('click', removeHandler);
+        }, 100);
+    }
+
+    handleUnlockField(fieldId) {
+        const result = this.farmingModule.unlockField(fieldId);
+        if (!result.success) {
+            this.uiRenderer.showInfo(result.reason);
+        }
     }
 
     handleFieldClick(fieldId) {
@@ -104,14 +236,14 @@ class InteractionManager {
         actionContainer.className = 'action-buttons field-action-buttons';
         actionContainer.style.marginTop = '0.5rem';
 
-        const waterBtn = this.createActionButton('💧 浇水', !field.watered, () => {
+        const waterBtn = this.createActionButton('浇水', !field.watered, () => {
             this.handleWaterField(fieldId);
             actionContainer.remove();
         });
 
         const availableFertilizers = this.economyModule.gameState.getAvailableFertilizers();
         const fertilizerBtn = this.createActionButton(
-            '🌱 施肥', 
+            '施肥', 
             !field.fertilized && availableFertilizers.length > 0, 
             () => {
                 this.showFertilizerSelection(fieldId);
@@ -123,7 +255,7 @@ class InteractionManager {
         actionContainer.appendChild(fertilizerBtn);
 
         if (isReady) {
-            const harvestBtn = this.createActionButton('✂️ 采摘', true, () => {
+            const harvestBtn = this.createActionButton('采摘', true, () => {
                 this.handleHarvestField(fieldId);
                 actionContainer.remove();
             });
@@ -193,7 +325,7 @@ class InteractionManager {
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>🌱 选择肥料</h2>
+                    <h2>选择肥料</h2>
                     <button class="close-btn" id="close-fertilizer-modal">×</button>
                 </div>
                 <div class="modal-body">

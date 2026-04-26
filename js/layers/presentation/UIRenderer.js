@@ -1,12 +1,17 @@
 class UIRenderer {
-    constructor(eventBus, timeModule, gameState, farmingModule, economyModule, animationManager, effectManager) {
+    constructor(eventBus, timeModule, gameState, farmingModule, economyModule, sanityModule, pollutionModule, livestockModule, animationManager, effectManager) {
         this.eventBus = eventBus;
         this.timeModule = timeModule;
         this.gameState = gameState;
         this.farmingModule = farmingModule;
         this.economyModule = economyModule;
+        this.sanityModule = sanityModule;
+        this.pollutionModule = pollutionModule;
+        this.livestockModule = livestockModule;
         this.animationManager = animationManager;
         this.effectManager = effectManager;
+
+        this.currentView = 'fields';
 
         this.initDOMElements();
         this.setupListeners();
@@ -24,7 +29,22 @@ class UIRenderer {
         
         this.moneyDisplay = document.getElementById('money-display');
         
+        this.sanityProgress = document.getElementById('sanity-progress');
+        this.sanityDisplay = document.getElementById('sanity-display');
+        this.sanityLevel = document.getElementById('sanity-level');
+        
+        this.pollutionProgress = document.getElementById('pollution-progress');
+        this.pollutionDisplay = document.getElementById('pollution-display');
+        this.pollutionLevel = document.getElementById('pollution-level');
+        
+        this.fieldsView = document.getElementById('fields-view');
+        this.barnView = document.getElementById('barn-view');
         this.fieldsContainer = document.getElementById('fields-container');
+        this.barnContainer = document.getElementById('barn-container');
+        this.barnInfo = document.getElementById('barn-info');
+        
+        this.navLeft = document.getElementById('nav-left');
+        this.navRight = document.getElementById('nav-right');
         
         this.infoPanel = document.getElementById('info-panel');
         this.infoContent = document.getElementById('info-content');
@@ -33,13 +53,15 @@ class UIRenderer {
         this.merchantContent = document.getElementById('merchant-content');
         this.marketContent = document.getElementById('market-content');
         this.warehouseContent = document.getElementById('warehouse-content');
+        this.logContent = document.getElementById('log-content');
 
         this.modals = {
             backpack: document.getElementById('backpack-modal'),
             merchant: document.getElementById('merchant-modal'),
             market: document.getElementById('market-modal'),
             warehouse: document.getElementById('warehouse-modal'),
-            developer: document.getElementById('developer-modal')
+            developer: document.getElementById('developer-modal'),
+            log: document.getElementById('log-modal')
         };
     }
 
@@ -105,8 +127,70 @@ class UIRenderer {
         });
 
         this.eventBus.on('time:seasonChanged', (data) => {
-            this.showInfo(`季节变化：现在是${data.seasonName}季！`);
+            this.showInfo(`季节变化：现在是${data.seasonName}季！`, 'info');
             this.renderFields();
+        });
+
+        this.eventBus.on('sanity:changed', (data) => {
+            this.updateSanityDisplay();
+        });
+
+        this.eventBus.on('sanity:levelDown', (data) => {
+            this.showInfo(`理智下降：${data.oldLevel.name} → ${data.newLevel.name}`, 'warning');
+        });
+
+        this.eventBus.on('sanity:levelUp', (data) => {
+            this.showInfo(`理智恢复：${data.oldLevel.name} → ${data.newLevel.name}`, 'success');
+        });
+
+        this.eventBus.on('pollution:changed', (data) => {
+            this.updatePollutionDisplay();
+        });
+
+        this.eventBus.on('pollution:levelUp', (data) => {
+            this.showInfo(`污染加剧：${data.oldLevel.name} → ${data.newLevel.name}`, 'warning');
+        });
+
+        this.eventBus.on('pollution:levelDown', (data) => {
+            this.showInfo(`污染减轻：${data.oldLevel.name} → ${data.newLevel.name}`, 'success');
+        });
+
+        this.eventBus.on('pollution:negativeEventTriggered', (data) => {
+            this.showInfo(`发生了负面事件：${data.event.name}`, 'danger');
+        });
+
+        this.eventBus.on('livestock:wildAnimalSpawned', (data) => {
+            this.showInfo(`一只${data.name}出现在田地附近！`, 'info');
+        });
+
+        this.eventBus.on('livestock:captureSuccess', (data) => {
+            this.showInfo(`成功捕获了${data.wildAnimal.name}！`, 'success');
+            this.renderBarn();
+        });
+
+        this.eventBus.on('livestock:captureFailed', (data) => {
+            this.showInfo(`捕获失败：${data.reason}`, 'warning');
+        });
+
+        this.eventBus.on('livestock:animalProduced', (data) => {
+            this.showInfo(`${data.productName}×${data.amount}`, 'success');
+        });
+
+        this.eventBus.on('livestock:barnUpgraded', (data) => {
+            this.showInfo(`畜栏升级成功！容量提升到${data.capacity}`, 'success');
+            this.renderBarnInfo();
+        });
+
+        this.eventBus.on('livestock:upgradeFailed', (data) => {
+            this.showInfo(`升级失败：${data.reason}`, 'warning');
+        });
+
+        this.eventBus.on('ui:switchToFields', () => {
+            this.switchToFields();
+        });
+
+        this.eventBus.on('ui:switchToBarn', () => {
+            this.switchToBarn();
         });
     }
 
@@ -131,7 +215,147 @@ class UIRenderer {
     updateAllDisplays() {
         this.updateTimeDisplay();
         this.updateMoneyDisplay();
+        this.updateSanityDisplay();
+        this.updatePollutionDisplay();
         this.effectManager.updateDayNightTheme(this.timeModule.isNight());
+    }
+
+    switchToFields() {
+        this.currentView = 'fields';
+        this.fieldsView.classList.remove('hidden');
+        this.fieldsView.classList.add('active');
+        this.barnView.classList.remove('active');
+        this.barnView.classList.add('hidden');
+        
+        if (this.navLeft) this.navLeft.style.visibility = 'hidden';
+        if (this.navRight) this.navRight.style.visibility = 'visible';
+        
+        this.renderFields();
+    }
+
+    switchToBarn() {
+        this.currentView = 'barn';
+        this.barnView.classList.remove('hidden');
+        this.barnView.classList.add('active');
+        this.fieldsView.classList.remove('active');
+        this.fieldsView.classList.add('hidden');
+        
+        if (this.navLeft) this.navLeft.style.visibility = 'visible';
+        if (this.navRight) this.navRight.style.visibility = 'hidden';
+        
+        this.renderBarn();
+    }
+
+    updateSanityDisplay() {
+        const sanity = this.sanityModule ? this.sanityModule.getSanity() : this.gameState.getSanity();
+        const level = this.sanityModule ? this.sanityModule.getSanityLevel() : null;
+        const progress = (sanity / 100) * 100;
+        
+        if (this.sanityProgress) {
+            this.sanityProgress.style.width = `${progress}%`;
+        }
+        if (this.sanityDisplay) {
+            this.sanityDisplay.textContent = sanity;
+        }
+        if (this.sanityLevel && level) {
+            this.sanityLevel.textContent = level.name;
+        }
+    }
+
+    updatePollutionDisplay() {
+        const pollution = this.pollutionModule ? this.pollutionModule.getPollution() : this.gameState.getPollution();
+        const level = this.pollutionModule ? this.pollutionModule.getPollutionLevel() : null;
+        const progress = (pollution / 100) * 100;
+        
+        if (this.pollutionProgress) {
+            this.pollutionProgress.style.width = `${progress}%`;
+        }
+        if (this.pollutionDisplay) {
+            this.pollutionDisplay.textContent = pollution;
+        }
+        if (this.pollutionLevel && level) {
+            this.pollutionLevel.textContent = level.name;
+        }
+    }
+
+    renderBarn() {
+        this.renderBarnInfo();
+        this.renderBarnAnimals();
+    }
+
+    renderBarnInfo() {
+        if (!this.barnInfo || !this.livestockModule) return;
+        
+        const barnLevel = this.livestockModule.getBarnLevel();
+        const capacity = this.livestockModule.getBarnCapacity();
+        const animalCount = this.livestockModule.getAnimalCount();
+        const upgradeCost = this.livestockModule.getUpgradeCost();
+        
+        this.barnInfo.innerHTML = `
+            <div class="barn-stats">
+                <span>等级: ${barnLevel}</span>
+                <span>容量: ${animalCount}/${capacity}</span>
+            </div>
+            <div class="barn-upgrade">
+                <button class="upgrade-barn-btn" id="upgrade-barn">
+                    升级畜栏 (${upgradeCost}金币)
+                </button>
+            </div>
+        `;
+    }
+
+    renderBarnAnimals() {
+        if (!this.barnContainer || !this.livestockModule) return;
+        
+        const animals = this.livestockModule.getAnimals();
+        const AnimalConfig = window.AnimlConfig || {};
+        
+        this.barnContainer.innerHTML = '';
+        
+        if (animals.length === 0) {
+            this.barnContainer.innerHTML = `
+                <div class="empty-barn">
+                    <p>畜栏是空的</p>
+                    <p class="hint">在田地附近捕捉野生动物</p>
+                </div>
+            `;
+            return;
+        }
+        
+        animals.forEach((animal, index) => {
+            const animalElement = document.createElement('div');
+            animalElement.className = 'animal-card';
+            animalElement.dataset.animalId = index;
+            
+            const getTimeUntilProduct = this.livestockModule.getTimeUntilProduct ? 
+                this.livestockModule.getTimeUntilProduct(index) : 'N/A';
+            
+            animalElement.innerHTML = `
+                <div class="animal-icon">${animal.type === 'chicken' ? '🐔' : animal.type === 'cow' ? '🐮' : animal.type === 'pig' ? '🐷' : animal.type === 'goat' ? '🐐' : '🦇'}</div>
+                <div class="animal-name">${animal.name || animal.type}</div>
+                <div class="animal-status">
+                    ${animal.canProduce ? '<span class="product-ready">产品就绪</span>' : 
+                      `<span class="product-timer">下次产出: ${getTimeUntilProduct}</span>`}
+                </div>
+                <div class="animal-actions">
+                    ${animal.canProduce ? 
+                        `<button class="collect-btn" data-collect-id="${index}">收集</button>` : 
+                        ''}
+                </div>
+            `;
+            
+            if (animal.canProduce) {
+                const collectBtn = animalElement.querySelector('.collect-btn');
+                if (collectBtn) {
+                    collectBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.eventBus.emit('livestock:collectProduct', index);
+                    });
+                }
+            }
+            
+            this.barnContainer.appendChild(animalElement);
+        });
     }
 
     updateTimeDisplay() {
@@ -152,10 +376,41 @@ class UIRenderer {
         this.moneyDisplay.textContent = this.gameState.getMoney();
     }
 
-    showInfo(message) {
+    showInfo(message, logType = 'info') {
         this.infoContent.textContent = message;
         this.animationManager.animateInfoPanel();
         this.effectManager.showToast(message);
+        this.gameState.addDialogLog(message, logType);
+    }
+
+    renderLogContent() {
+        const logs = this.gameState.getDialogLog(50);
+        
+        if (logs.length === 0) {
+            this.logContent.innerHTML = '<div style="text-align: center; opacity: 0.7;">暂无日志记录</div>';
+            return;
+        }
+
+        this.logContent.innerHTML = '';
+        
+        logs.forEach((log, index) => {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.dataset.logType = log.type;
+            
+            const timestamp = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '';
+            
+            logEntry.innerHTML = `
+                <div class="log-time">${timestamp}</div>
+                <div class="log-message">${log.message}</div>
+            `;
+            
+            this.logContent.appendChild(logEntry);
+        });
+
+        if (this.logContent.firstChild) {
+            this.logContent.firstChild.scrollIntoView({ behavior: 'auto' });
+        }
     }
 
     showModal(modalName) {
@@ -177,6 +432,7 @@ class UIRenderer {
     renderFields() {
         const PlantConfig = window.PlantConfig || {};
         const fields = this.farmingModule.getAllFields();
+        const unlockedCount = fields.filter(f => f.unlocked).length;
         
         this.fieldsContainer.innerHTML = '';
         
@@ -187,7 +443,17 @@ class UIRenderer {
             
             if (!field.unlocked) {
                 fieldElement.classList.add('locked');
-                fieldElement.innerHTML = '<div class="field-content">🔒</div>';
+                const nextUnlockPrice = this.farmingModule.getUnlockPrice ? 
+                    this.farmingModule.getUnlockPrice(unlockedCount) : 0;
+                fieldElement.innerHTML = `
+                    <div class="field-content">
+                        <div class="locked-indicator">未解锁</div>
+                        <div class="unlock-price">解锁: ${nextUnlockPrice}金币</div>
+                    </div>
+                `;
+                fieldElement.addEventListener('click', () => {
+                    this.eventBus.emit('farming:fieldClicked', index);
+                });
             } else if (!field.plant) {
                 fieldElement.innerHTML = `
                     <div class="field-content">空地</div>
@@ -208,9 +474,10 @@ class UIRenderer {
                 const stageText = plantData.stages[field.stage];
                 const isReady = field.stage >= plantData.stages.length - 1;
                 
+                const stageClass = `plant-stage-${Math.min(field.stage, 3)}`;
                 fieldElement.innerHTML = `
                     <div class="field-content">
-                        <div class="plant-breathing">${stageText}</div>
+                        <div class="plant-breathing ${stageClass}">${stageText}</div>
                     </div>
                     <div class="field-status">
                         <span class="water-indicator">${field.watered ? '已浇水' : '未浇水'}</span>
@@ -324,7 +591,7 @@ class UIRenderer {
                     <div class="item-name">${seed.name}种子</div>
                     <div class="item-info">${seed.description}</div>
                     <div class="item-info">生长时间: ${seed.growthTime.hours}小时</div>
-                    <div class="item-price">💰 ${seed.buyPrice}金币</div>
+                    <div class="item-price">${seed.buyPrice}金币</div>
                 `;
                 
                 card.addEventListener('click', () => {
@@ -342,7 +609,7 @@ class UIRenderer {
                 card.innerHTML = `
                     <div class="item-name">${fertilizer.name}</div>
                     <div class="item-info">${fertilizer.description}</div>
-                    <div class="item-price">💰 ${fertilizer.buyPrice}金币</div>
+                    <div class="item-price">${fertilizer.buyPrice}金币</div>
                 `;
                 
                 card.addEventListener('click', () => {
@@ -364,7 +631,7 @@ class UIRenderer {
             const priceDiff = priceData.currentPrice - priceData.basePrice;
             const priceDiffPercent = Math.round((priceDiff / priceData.basePrice) * 100);
             
-            const priceColor = priceDiff > 0 ? 'color: #4caf50;' : priceDiff < 0 ? 'color: #f44336;' : '';
+            const priceClass = priceDiff > 0 ? 'price-up' : priceDiff < 0 ? 'price-down' : 'price-flat';
             const priceDiffText = priceDiff > 0 ? `+${priceDiffPercent}%` : priceDiff < 0 ? `${priceDiffPercent}%` : '平价';
 
             const card = document.createElement('div');
@@ -373,8 +640,8 @@ class UIRenderer {
             card.innerHTML = `
                 <div class="item-name">${priceData.plantName}</div>
                 <div class="item-info">基础价格: ${priceData.basePrice}金币</div>
-                <div class="item-price" style="${priceColor}">
-                    💰 ${priceData.currentPrice}金币 (${priceDiffText})
+                <div class="item-price ${priceClass}">
+                    ${priceData.currentPrice}金币 (${priceDiffText})
                 </div>
                 ${priceData.hasCrop ? `<div class="item-info" style="margin-top: 0.5rem;">背包中: ${priceData.cropCount}个</div>` : ''}
             `;

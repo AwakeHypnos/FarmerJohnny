@@ -8,6 +8,7 @@ class InputHandler {
         this.bindMenuButtons();
         this.bindModalButtons();
         this.bindTabEvents();
+        this.bindNavigationButtons();
     }
 
     bindMenuButtons() {
@@ -41,6 +42,10 @@ class InputHandler {
             this.eventBus.emit('input:showWarehouse');
         });
 
+        this.eventBinder.bindClick('log-btn', () => {
+            this.eventBus.emit('input:showLog');
+        });
+
         this.eventBinder.bindClick('close-backpack', () => {
             this.eventBus.emit('input:hideBackpack');
         });
@@ -59,6 +64,26 @@ class InputHandler {
 
         this.eventBinder.bindClick('close-developer', () => {
             this.eventBus.emit('input:hideDeveloper');
+        });
+
+        this.eventBinder.bindClick('close-log', () => {
+            this.eventBus.emit('input:hideLog');
+        });
+    }
+
+    bindNavigationButtons() {
+        this.eventBinder.bindClick('nav-left', () => {
+            this.eventBus.emit('input:switchToFields');
+        });
+
+        this.eventBinder.bindClick('nav-right', () => {
+            this.eventBus.emit('input:switchToBarn');
+        });
+    }
+
+    bindBarnButtons() {
+        this.eventBinder.bindClick('upgrade-barn', () => {
+            this.eventBus.emit('input:upgradeBarn');
         });
     }
 

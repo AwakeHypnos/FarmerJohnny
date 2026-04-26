@@ -4,35 +4,125 @@ class EconomyModule {
         this.gameState = gameState;
         this.timeModule = timeModule;
 
+        this.config = {
+            marketDailyCrops: 6,
+            minInSeasonCrops: 4,
+            maxPriceMultiplier: 5,
+            supplyThreshold: 5,
+            priceDecreasePerSupply: 0.1,
+            maxPriceDecrease: 0.5
+        };
+
+        this.marketState = {
+            dailyCrops: [],
+            supplyData: {}
+        };
+
         this.setupListeners();
     }
 
     setupListeners() {
         this.eventBus.on('time:seasonChanged', () => {
-            this.updateMarketPrices();
+            this.refreshDailyMarket();
+        });
+
+        this.eventBus.on('time:newDay', () => {
+            this.refreshDailyMarket();
         });
     }
 
     init() {
-        this.updateMarketPrices();
+        this.refreshDailyMarket();
     }
 
     getMoney() {
         return this.gameState.getMoney();
     }
 
-    updateMarketPrices() {
-        const PlantConfig = window.PlantConfig || {};
-        const fluctuation = 0.2;
+    getRandomPriceMultiplier() {
+        const random = Math.random();
+        let multiplier;
 
-        const plants = PlantConfig.getAllPlants ? PlantConfig.getAllPlants() : PlantConfig;
-        for (const [plantType, plantData] of Object.entries(plants)) {
+        if (random < 0.4) {
+            multiplier = 0.8 + Math.random() * 0.4;
+        } else if (random < 0.7) {
+            multiplier = 0.6 + Math.random() * 0.8;
+        } else if (random < 0.85) {
+            multiplier = 0.5 + Math.random() * 1.5;
+        } else if (random < 0.95) {
+            multiplier = 0.5 + Math.random() * 3;
+        } else {
+            multiplier = 0.5 + Math.random() * 4;
+        }
+
+        return Math.max(0.5, Math.min(this.config.maxPriceMultiplier, multiplier));
+    }
+
+    refreshDailyMarket() {
+        const PlantConfig = window.PlantConfig || {};
+        const currentSeason = this.timeModule.getSeason();
+
+        const allPlants = PlantConfig.getAllPlants ? PlantConfig.getAllPlants() : PlantConfig;
+        const allPlantList = [];
+        const inSeasonPlants = [];
+
+        for (const [plantType, plantData] of Object.entries(allPlants)) {
             if (typeof plantData === 'object' && plantData.sellPrice) {
-                const basePrice = plantData.sellPrice;
-                const randomFactor = 1 + (Math.random() * fluctuation * 2 - fluctuation);
-                const newPrice = Math.floor(basePrice * randomFactor);
-                this.gameState.setMarketPrice(plantType, newPrice);
+                allPlantList.push({ id: plantType, ...plantData });
+                
+                if (plantData.seasons && plantData.seasons.includes(currentSeason)) {
+                    inSeasonPlants.push({ id: plantType, ...plantData });
+                }
             }
+        }
+
+        const selectedCrops = [];
+        const usedIds = new Set();
+
+        const inSeasonCount = Math.min(this.config.minInSeasonCrops, inSeasonPlants.length);
+        const shuffledInSeason = [...inSeasonPlants].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < inSeasonCount && i < shuffledInSeason.length; i++) {
+            selectedCrops.push(shuffledInSeason[i]);
+            usedIds.add(shuffledInSeason[i].id);
+        }
+
+        const remaining = this.config.marketDailyCrops - selectedCrops.length;
+        const availablePlants = allPlantList.filter(p => !usedIds.has(p.id));
+        const shuffledRemaining = [...availablePlants].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < remaining && i < shuffledRemaining.length; i++) {
+            selectedCrops.push(shuffledRemaining[i]);
+        }
+
+        this.marketState.dailyCrops = [];
+
+        selectedCrops.forEach(plant => {
+            const basePrice = plant.sellPrice;
+            const randomMultiplier = this.getRandomPriceMultiplier();
+            
+            let supplyMultiplier = 1;
+            const supplyCount = this.marketState.supplyData[plant.id] || 0;
+            if (supplyCount >= this.config.supplyThreshold) {
+                const excessSupply = supplyCount - this.config.supplyThreshold;
+                const decrease = Math.min(excessSupply * this.config.priceDecreasePerSupply, this.config.maxPriceDecrease);
+                supplyMultiplier = 1 - decrease;
+            }
+
+            const finalMultiplier = Math.max(0.5, randomMultiplier * supplyMultiplier);
+            const finalPrice = Math.max(1, Math.floor(basePrice * finalMultiplier));
+
+            this.gameState.setMarketPrice(plant.id, finalPrice);
+            this.marketState.dailyCrops.push({
+                plantType: plant.id,
+                plantName: plant.name,
+                basePrice: basePrice,
+                currentPrice: finalPrice,
+                multiplier: finalMultiplier,
+                supplyCount: supplyCount
+            });
+        });
+
+        for (const plantId in this.marketState.supplyData) {
+            this.marketState.supplyData[plantId] = Math.max(0, this.marketState.supplyData[plantId] - 1);
         }
 
         this.eventBus.emit('economy:marketPricesUpdated');
@@ -51,26 +141,34 @@ class EconomyModule {
         };
     }
 
+    getDailyMarketCrops() {
+        return [...this.marketState.dailyCrops];
+    }
+
     getAllMarketPrices() {
         const PlantConfig = window.PlantConfig || {};
         const prices = [];
 
-        const plants = PlantConfig.getAllPlants ? PlantConfig.getAllPlants() : PlantConfig;
-        for (const [plantType, plantData] of Object.entries(plants)) {
-            if (typeof plantData === 'object' && plantData.sellPrice) {
-                const priceData = this.getMarketPrice(plantType);
-                if (priceData) {
-                    prices.push({
-                        plantType,
-                        plantName: plantData.name,
-                        basePrice: priceData.basePrice,
-                        currentPrice: priceData.currentPrice,
-                        hasCrop: this.gameState.hasCrop(plantType),
-                        cropCount: this.gameState.getCropCount(plantType)
-                    });
-                }
-            }
-        }
+        const dailyCrops = this.getDailyMarketCrops();
+        
+        dailyCrops.forEach(crop => {
+            const hasCropInventory = this.gameState.getCropCount(crop.plantType, false) > 0;
+            const hasCropWarehouse = this.gameState.getCropCount(crop.plantType, true) > 0;
+            const cropCountInventory = this.gameState.getCropCount(crop.plantType, false);
+            const cropCountWarehouse = this.gameState.getCropCount(crop.plantType, true);
+
+            prices.push({
+                plantType: crop.plantType,
+                plantName: crop.plantName,
+                basePrice: crop.basePrice,
+                currentPrice: crop.currentPrice,
+                hasCrop: hasCropInventory || hasCropWarehouse,
+                cropCount: cropCountInventory,
+                cropCountWarehouse: cropCountWarehouse,
+                multiplier: crop.multiplier,
+                supplyCount: crop.supplyCount
+            });
+        });
 
         return prices;
     }
@@ -92,7 +190,12 @@ class EconomyModule {
         }
 
         this.gameState.subtractMoney(price);
-        this.gameState.addSeed(seedType);
+        const result = this.gameState.addSeed(seedType);
+
+        if (!result.success) {
+            this.gameState.addMoney(price);
+            return { success: false, reason: result.reason };
+        }
 
         this.eventBus.emit('economy:seedBought', {
             seedType,
@@ -121,7 +224,12 @@ class EconomyModule {
         }
 
         this.gameState.subtractMoney(price);
-        this.gameState.addFertilizer(fertilizerType);
+        const result = this.gameState.addFertilizer(fertilizerType);
+
+        if (!result.success) {
+            this.gameState.addMoney(price);
+            return { success: false, reason: result.reason };
+        }
 
         this.eventBus.emit('economy:fertilizerBought', {
             fertilizerType,
@@ -133,7 +241,7 @@ class EconomyModule {
         return { success: true };
     }
 
-    sellCrop(cropType) {
+    sellCrop(cropType, fromWarehouse = true) {
         const PlantConfig = window.PlantConfig || {};
         const plantData = PlantConfig.getPlant ? 
             PlantConfig.getPlant(cropType) : PlantConfig[cropType];
@@ -142,19 +250,33 @@ class EconomyModule {
             return { success: false, reason: '作物不存在' };
         }
 
-        if (!this.gameState.hasCrop(cropType)) {
-            return { success: false, reason: '背包中没有该作物' };
+        const hasCropInventory = this.gameState.getCropCount(cropType, false) > 0;
+        const hasCropWarehouse = this.gameState.getCropCount(cropType, true) > 0;
+
+        if (!hasCropInventory && !hasCropWarehouse) {
+            return { success: false, reason: '没有该作物可出售' };
         }
 
+        const useWarehouse = fromWarehouse && hasCropWarehouse;
         const price = this.gameState.getMarketPrice(cropType, plantData.sellPrice);
 
-        this.gameState.removeCrop(cropType);
+        const removeResult = this.gameState.removeCrop(cropType, 1, useWarehouse);
+        if (!removeResult) {
+            return { success: false, reason: '作物数量不足' };
+        }
+
         this.gameState.addMoney(price);
+
+        if (!this.marketState.supplyData[cropType]) {
+            this.marketState.supplyData[cropType] = 0;
+        }
+        this.marketState.supplyData[cropType]++;
 
         this.eventBus.emit('economy:cropSold', {
             cropType,
             cropName: plantData.name,
-            price
+            price,
+            fromWarehouse: useWarehouse
         });
         this.eventBus.emit('economy:moneyChanged', this.getMoney());
 
@@ -205,6 +327,10 @@ class EconomyModule {
             return { success: false, reason: '背包中没有该物品' };
         }
 
+        if (!this.gameState.canAddToWarehouse(itemType, category)) {
+            return { success: false, reason: '仓库已满' };
+        }
+
         source[itemType]--;
         if (!target[itemType]) {
             target[itemType] = 0;
@@ -225,6 +351,10 @@ class EconomyModule {
 
         if (!source[itemType] || source[itemType] <= 0) {
             return { success: false, reason: '仓库中没有该物品' };
+        }
+
+        if (!this.gameState.canAddToInventory(itemType, category)) {
+            return { success: false, reason: '背包已满' };
         }
 
         source[itemType]--;

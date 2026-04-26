@@ -9,6 +9,18 @@ class FarmerJohnnyApp {
         this.gameState = new GameState();
         this.saveManager = new SaveManager(this.eventBus);
 
+        this.sanityModule = new SanityModule(
+            this.eventBus,
+            this.gameState,
+            this.timeModule
+        );
+
+        this.pollutionModule = new PollutionModule(
+            this.eventBus,
+            this.gameState,
+            this.timeModule
+        );
+
         this.farmingModule = new FarmingModule(
             this.eventBus, 
             this.gameState, 
@@ -22,6 +34,13 @@ class FarmerJohnnyApp {
             this.timeModule
         );
 
+        this.livestockModule = new LivestockModule(
+            this.eventBus,
+            this.gameState,
+            this.economyModule,
+            this.timeModule
+        );
+
         this.animationManager = new AnimationManager(this.eventBus);
         this.effectManager = new EffectManager(this.eventBus);
 
@@ -31,6 +50,9 @@ class FarmerJohnnyApp {
             this.gameState,
             this.farmingModule,
             this.economyModule,
+            this.sanityModule,
+            this.pollutionModule,
+            this.livestockModule,
             this.animationManager,
             this.effectManager
         );
@@ -41,6 +63,9 @@ class FarmerJohnnyApp {
             this.eventBus,
             this.farmingModule,
             this.economyModule,
+            this.sanityModule,
+            this.pollutionModule,
+            this.livestockModule,
             this.uiRenderer
         );
 
@@ -104,11 +129,14 @@ class FarmerJohnnyApp {
 
         this.gameState.init();
         this.timeModule.init(1, 6, 0, 'spring');
+        this.sanityModule.init();
+        this.pollutionModule.init();
         this.farmingModule.init();
         this.economyModule.init();
+        this.livestockModule.init();
 
         this.uiRenderer.switchToGameScreen();
-        this.uiRenderer.renderFields();
+        this.uiRenderer.switchToFields();
         this.uiRenderer.showInfo('游戏开始！你是一位神秘的农夫，在这片被古老力量笼罩的土地上开始了你的种植之旅。');
 
         this.startTimeLoop();
@@ -127,12 +155,15 @@ class FarmerJohnnyApp {
         const success = this.saveManager.load(
             this.gameState,
             this.timeModule,
-            this.farmingModule
+            this.farmingModule,
+            this.sanityModule,
+            this.pollutionModule,
+            this.livestockModule
         );
 
         if (success) {
             this.uiRenderer.switchToGameScreen();
-            this.uiRenderer.renderFields();
+            this.uiRenderer.switchToFields();
             this.uiRenderer.showInfo('存档读取成功！');
             this.startTimeLoop();
             this.logger.info('存档加载成功');
@@ -154,6 +185,10 @@ class FarmerJohnnyApp {
             const gameMinutesToAdvance = updateInterval / realMsPerGameMinute;
             this.timeModule.advanceTime(gameMinutesToAdvance);
             this.farmingModule.updatePlantGrowth(gameMinutesToAdvance);
+            
+            if (this.livestockModule && this.livestockModule.updateAnimalTimers) {
+                this.livestockModule.updateAnimalTimers(gameMinutesToAdvance);
+            }
 
             if (Math.floor(this.timeModule.state.minute) === 0) {
                 this.autoSave();
@@ -174,7 +209,10 @@ class FarmerJohnnyApp {
         this.saveManager.save(
             this.gameState,
             this.timeModule,
-            this.farmingModule
+            this.farmingModule,
+            this.sanityModule,
+            this.pollutionModule,
+            this.livestockModule
         );
     }
 
@@ -182,7 +220,10 @@ class FarmerJohnnyApp {
         const success = this.saveManager.save(
             this.gameState,
             this.timeModule,
-            this.farmingModule
+            this.farmingModule,
+            this.sanityModule,
+            this.pollutionModule,
+            this.livestockModule
         );
 
         if (success) {
