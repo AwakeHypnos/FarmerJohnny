@@ -308,7 +308,7 @@ class UIRenderer {
         if (!this.barnContainer || !this.livestockModule) return;
         
         const animals = this.livestockModule.getAnimals();
-        const AnimalConfig = window.AnimlConfig || {};
+        const AnimalConfig = window.AnimalConfig || {};
         
         this.barnContainer.innerHTML = '';
         
@@ -325,31 +325,33 @@ class UIRenderer {
         animals.forEach((animal, index) => {
             const animalElement = document.createElement('div');
             animalElement.className = 'animal-card';
-            animalElement.dataset.animalId = index;
+            animalElement.dataset.animalId = animal.id;
             
-            const getTimeUntilProduct = this.livestockModule.getTimeUntilProduct ? 
+            const timeUntilProduct = this.livestockModule.getTimeUntilProduct ? 
                 this.livestockModule.getTimeUntilProduct(index) : 'N/A';
+            
+            const isReady = timeUntilProduct === '已就绪';
             
             animalElement.innerHTML = `
                 <div class="animal-icon">${animal.type === 'chicken' ? '🐔' : animal.type === 'cow' ? '🐮' : animal.type === 'pig' ? '🐷' : animal.type === 'goat' ? '🐐' : '🦇'}</div>
                 <div class="animal-name">${animal.name || animal.type}</div>
                 <div class="animal-status">
-                    ${animal.canProduce ? '<span class="product-ready">产品就绪</span>' : 
-                      `<span class="product-timer">下次产出: ${getTimeUntilProduct}</span>`}
+                    ${isReady ? '<span class="product-ready">产品就绪</span>' : 
+                      `<span class="product-timer">下次产出: ${timeUntilProduct}</span>`}
                 </div>
                 <div class="animal-actions">
-                    ${animal.canProduce ? 
-                        `<button class="collect-btn" data-collect-id="${index}">收集</button>` : 
+                    ${isReady ? 
+                        `<button class="collect-btn" data-collect-id="${animal.id}">收集</button>` : 
                         ''}
                 </div>
             `;
             
-            if (animal.canProduce) {
+            if (isReady) {
                 const collectBtn = animalElement.querySelector('.collect-btn');
                 if (collectBtn) {
                     collectBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        this.eventBus.emit('livestock:collectProduct', index);
+                        this.eventBus.emit('livestock:collectProduct', animal.id);
                     });
                 }
             }

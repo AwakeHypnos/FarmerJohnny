@@ -7,6 +7,16 @@ class SanityModule {
         this.setupListeners();
     }
 
+    init() {
+        this.gameState.state.sanity = 100;
+        this.eventBus.emit('sanity:changed', {
+            oldValue: 100,
+            newValue: 100,
+            change: 0,
+            reason: '初始化理智值'
+        });
+    }
+
     setupListeners() {
         this.eventBus.on('time:hourChanged', () => {
             this.processPeriodicSanityChanges();

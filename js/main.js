@@ -37,8 +37,9 @@ class FarmerJohnnyApp {
         this.livestockModule = new LivestockModule(
             this.eventBus,
             this.gameState,
-            this.economyModule,
-            this.timeModule
+            this.timeModule,
+            this.sanityModule,
+            this.pollutionModule
         );
 
         this.animationManager = new AnimationManager(this.eventBus);
