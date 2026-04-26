@@ -40,7 +40,7 @@ class EffectManager {
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>🌱 选择肥料</h2>
+                    <h2>选择肥料</h2>
                     <button class="close-btn" id="close-fertilizer-modal">×</button>
                 </div>
                 <div class="modal-body">

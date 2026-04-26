@@ -5,13 +5,62 @@ class FarmingModule {
         this.timeModule = timeModule;
         this.environmentModule = environmentModule;
 
-        this.totalFields = 9;
+        this.totalFields = 52;
         this.unlockedFields = 1;
         this.fields = [];
 
         this.selectedSeed = null;
 
+        this.config = {
+            baseUnlockPrice: 100
+        };
+
         this.setupListeners();
+    }
+
+    getUnlockPrice(unlockedCount) {
+        return Math.floor(this.config.baseUnlockPrice * Math.pow(unlockedCount, 1.5));
+    }
+
+    getNextUnlockPrice() {
+        return this.getUnlockPrice(this.unlockedFields);
+    }
+
+    canUnlockField(fieldId) {
+        const field = this.fields[fieldId];
+        if (!field || field.unlocked) {
+            return { canUnlock: false, reason: '田地已解锁或无效' };
+        }
+
+        const price = this.getNextUnlockPrice();
+        if (!this.gameState.hasEnoughMoney(price)) {
+            return { canUnlock: false, reason: `资金不足，需要 ${price} 金币`, price };
+        }
+
+        return { canUnlock: true, price };
+    }
+
+    unlockField(fieldId) {
+        const check = this.canUnlockField(fieldId);
+        if (!check.canUnlock) {
+            return { success: false, reason: check.reason };
+        }
+
+        const price = check.price;
+        this.gameState.subtractMoney(price);
+
+        const field = this.fields[fieldId];
+        field.unlocked = true;
+        this.unlockedFields++;
+
+        this.eventBus.emit('farming:fieldUnlocked', {
+            fieldId,
+            price
+        });
+        this.eventBus.emit('farming:fieldsUpdated', this.fields);
+        this.eventBus.emit('economy:moneyChanged', this.gameState.getMoney());
+
+        return { success: true, price };
     }
 
     setupListeners() {
@@ -146,7 +195,13 @@ class FarmingModule {
         const field = this.fields[fieldId];
 
         if (!field.unlocked) {
-            this.eventBus.emit('farming:error', { message: '这块田地还未解锁。' });
+            const check = this.canUnlockField(fieldId);
+            this.eventBus.emit('farming:showUnlockOption', {
+                fieldId,
+                canUnlock: check.canUnlock,
+                price: check.price || this.getNextUnlockPrice(),
+                reason: check.reason
+            });
             return;
         }
 
@@ -246,7 +301,11 @@ class FarmingModule {
         const PlantConfig = window.PlantConfig || {};
         const plantData = PlantConfig.getPlant ? PlantConfig.getPlant(field.plant) : PlantConfig[field.plant];
 
-        this.gameState.addCrop(field.plant);
+        const result = this.gameState.addWarehouseCrop(field.plant);
+        if (!result.success) {
+            this.eventBus.emit('farming:error', { message: result.reason });
+            return { success: false, reason: result.reason };
+        }
 
         const harvestedPlant = field.plant;
         field.plant = null;
@@ -272,13 +331,13 @@ class FarmingModule {
         let needsUpdate = false;
 
         this.fields.forEach(field => {
-            if (field.plant && field.watered) {
+            if (field.plant) {
                 const plantData = PlantConfig.getPlant ? 
                     PlantConfig.getPlant(field.plant) : PlantConfig[field.plant];
                 
                 if (!plantData) return;
 
-                let growthRate = 1;
+                let growthRate = field.watered ? 1 : 0.5;
 
                 if (field.fertilized && field.fertilizerType) {
                     const fertilizer = FertilizerConfig.getFertilizer ? 

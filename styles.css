@@ -1,60 +1,52 @@
-/* 基础样式重置 */
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&display=swap');
+
+:root {
+    --ink-black: #0d0d12;
+    --crow-gray: #1a1a24;
+    --night-blue: #141820;
+    --midnight-gray: #1e1e2a;
+    --shadow-gray: #2a2a3a;
+    
+    --blood-red: #5a1a1a;
+    --corruption-brown: #4a2a1a;
+    --flesh-red: #3a1a1a;
+    
+    --abyss-purple: #2a1a3a;
+    --void-indigo: #1a1a3a;
+    --old-cyan: #1a2a3a;
+    
+    --mold-green: #1a2a1a;
+    --rot-green: #1a3a2a;
+    --stagnant-teal: #1a3a2a;
+    
+    --bone-white: #a0a0a0;
+    --ash-gray: #808080;
+    --ghost-glow: #9090a0;
+    
+    --gold-dull: #5a4a2a;
+    --gold-dark: #4a3a1a;
+    
+    --transition-fast: 0.2s ease;
+    --transition-medium: 0.5s ease;
+    --transition-slow: 1s ease;
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* 根变量定义 */
-:root {
-    /* 日间主题 */
-    --day-bg: #f0f4f8;
-    --day-primary: #2d5016;
-    --day-secondary: #4a7c23;
-    --day-accent: #8bc34a;
-    --day-text: #1a1a1a;
-    --day-card-bg: #ffffff;
-    --day-border: #d1d5db;
-    --day-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    
-    /* 夜间主题（克苏鲁风格） */
-    --night-bg: #0a0e17;
-    --night-primary: #1a2a3a;
-    --night-secondary: #2a4a5a;
-    --night-accent: #7a9a8a;
-    --night-text: #c0c8d0;
-    --night-card-bg: #141a24;
-    --night-border: #2a3a4a;
-    --night-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    
-    /* 克苏鲁主题色 */
-    --cthulhu-green: #1a3a2a;
-    --cthulhu-purple: #2a1a3a;
-    --cthulhu-teal: #1a3a3a;
-    --cthulhu-gold: #8a7a3a;
-    
-    /* 过渡动画 */
-    --transition-fast: 0.2s ease;
-    --transition-medium: 0.5s ease;
-    --transition-slow: 1s ease;
-}
-
-/* 基础样式 */
 body {
-    font-family: 'Courier New', monospace;
-    background-color: var(--day-bg);
-    color: var(--day-text);
-    transition: background-color var(--transition-medium), color var(--transition-medium);
+    font-family: 'IM Fell English SC', 'ZCOOL KuaiLe', 'Ma Shan Zheng', serif;
+    background-color: var(--ink-black);
+    color: var(--bone-white);
     min-height: 100vh;
     overflow-x: hidden;
+    font-size: 16px;
+    line-height: 1.6;
 }
 
-body.night-theme {
-    background-color: var(--night-bg);
-    color: var(--night-text);
-}
-
-/* 屏幕容器 */
 .screen {
     position: absolute;
     top: 0;
@@ -83,11 +75,10 @@ body.night-theme {
     z-index: 1;
 }
 
-/* 主菜单样式 */
 #main-menu {
     justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, var(--cthulhu-green) 0%, var(--cthulhu-purple) 100%);
+    background: linear-gradient(180deg, var(--ink-black) 0%, var(--night-blue) 50%, var(--abyss-purple) 100%);
     position: relative;
     overflow: hidden;
 }
@@ -99,8 +90,10 @@ body.night-theme {
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at 20% 80%, rgba(122, 154, 138, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(138, 122, 58, 0.1) 0%, transparent 50%);
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(42, 26, 58, 0.3) 0%, transparent 40%),
+        radial-gradient(circle at 80% 20%, rgba(26, 42, 58, 0.3) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(26, 26, 58, 0.2) 0%, transparent 60%);
     pointer-events: none;
 }
 
@@ -111,18 +104,29 @@ body.night-theme {
 }
 
 .game-title {
-    font-size: 3rem;
-    color: #c0c8d0;
-    text-shadow: 0 0 10px rgba(122, 154, 138, 0.5);
+    font-size: 3.5rem;
+    color: var(--ghost-glow);
+    text-shadow: 
+        0 0 20px rgba(144, 144, 160, 0.5),
+        0 0 40px rgba(42, 26, 58, 0.8);
     margin-bottom: 1rem;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.2em;
+    font-weight: normal;
+    animation: title-flicker 4s infinite;
+}
+
+@keyframes title-flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.9; }
+    75% { opacity: 0.95; }
 }
 
 .game-subtitle {
     font-size: 1.2rem;
-    color: #a0a8b0;
+    color: var(--ash-gray);
     margin-bottom: 3rem;
     font-style: italic;
+    letter-spacing: 0.1em;
 }
 
 .menu-buttons {
@@ -134,22 +138,22 @@ body.night-theme {
 }
 
 .menu-button {
-    background: linear-gradient(135deg, var(--cthulhu-teal) 0%, var(--cthulhu-green) 100%);
-    color: #c0c8d0;
-    border: 2px solid var(--night-border);
+    background: linear-gradient(180deg, var(--shadow-gray) 0%, var(--midnight-gray) 100%);
+    color: var(--bone-white);
+    border: 2px solid var(--old-cyan);
     padding: 1rem 2rem;
     font-size: 1.1rem;
     font-family: inherit;
     cursor: pointer;
     transition: all var(--transition-fast);
-    box-shadow: var(--night-shadow);
+    letter-spacing: 0.1em;
 }
 
 .menu-button:hover {
-    background: linear-gradient(135deg, var(--cthulhu-green) 0%, var(--cthulhu-teal) 100%);
+    background: linear-gradient(180deg, var(--old-cyan) 0%, var(--abyss-purple) 100%);
+    border-color: var(--ghost-glow);
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-    border-color: var(--cthulhu-gold);
+    box-shadow: 0 4px 20px rgba(144, 144, 160, 0.3);
 }
 
 .menu-button:active {
@@ -159,24 +163,23 @@ body.night-theme {
 .dark-energy {
     margin-top: 3rem;
     font-size: 0.9rem;
-    color: #7a9a8a;
+    color: var(--ash-gray);
     font-style: italic;
     opacity: 0.7;
 }
 
 .energy-indicator {
     animation: pulse 2s infinite;
+    display: inline-block;
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 1; }
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
 }
 
-/* 游戏界面样式 */
 #game-screen {
-    background-color: var(--day-bg);
-    transition: background-color var(--transition-medium);
+    background-color: var(--ink-black);
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -184,11 +187,6 @@ body.night-theme {
     overflow: hidden;
 }
 
-body.night-theme #game-screen {
-    background-color: var(--night-bg);
-}
-
-/* 游戏主内容区域 */
 .game-main-content {
     flex: 1;
     display: flex;
@@ -196,19 +194,12 @@ body.night-theme #game-screen {
     overflow: hidden;
 }
 
-/* 时间条样式 */
 .time-bar-container {
-    background-color: var(--day-card-bg);
+    background-color: var(--night-blue);
     padding: 1rem;
-    border-bottom: 1px solid var(--day-border);
-    transition: background-color var(--transition-medium), border-color var(--transition-medium);
+    border-bottom: 1px solid var(--old-cyan);
     position: relative;
     z-index: 100;
-}
-
-body.night-theme .time-bar-container {
-    background-color: var(--night-card-bg);
-    border-color: var(--night-border);
 }
 
 .time-labels {
@@ -219,29 +210,28 @@ body.night-theme .time-bar-container {
 }
 
 .time-label {
-    font-weight: bold;
+    font-weight: normal;
+    letter-spacing: 0.1em;
 }
 
 .day-label {
-    color: var(--day-primary);
+    color: var(--old-cyan);
 }
 
 .night-label {
-    color: var(--cthulhu-purple);
+    color: var(--abyss-purple);
 }
 
 .time-bar {
     position: relative;
     height: 12px;
     background: linear-gradient(90deg, 
-        #8bc34a 0%, 
-        #ffeb3b 25%, 
-        #ff9800 50%, 
-        #673ab7 75%, 
-        #3a1a4a 100%);
-    border-radius: 6px;
+        var(--old-cyan) 0%, 
+        var(--mold-green) 25%, 
+        var(--corruption-brown) 50%, 
+        var(--abyss-purple) 75%, 
+        var(--void-indigo) 100%);
     overflow: hidden;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .time-progress {
@@ -249,8 +239,7 @@ body.night-theme .time-bar-container {
     top: 0;
     left: 0;
     height: 100%;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
+    background: rgba(144, 144, 160, 0.2);
     transition: width 0.1s linear;
 }
 
@@ -259,16 +248,11 @@ body.night-theme .time-bar-container {
     top: -4px;
     width: 20px;
     height: 20px;
-    background: var(--day-text);
+    background: var(--ghost-glow);
     border-radius: 50%;
     transform: translateX(-50%);
-    box-shadow: 0 0 10px var(--day-text);
-    transition: left 0.1s linear, background-color var(--transition-medium);
-}
-
-body.night-theme .time-indicator {
-    background: var(--night-text);
-    box-shadow: 0 0 10px var(--night-text);
+    box-shadow: 0 0 15px var(--ghost-glow);
+    transition: left 0.1s linear;
 }
 
 .time-info {
@@ -276,9 +260,9 @@ body.night-theme .time-indicator {
     justify-content: space-between;
     margin-top: 0.5rem;
     font-size: 0.9rem;
+    color: var(--ash-gray);
 }
 
-/* 右上角功能区 */
 .top-right-panel {
     position: absolute;
     top: 1rem;
@@ -291,31 +275,23 @@ body.night-theme .time-indicator {
 }
 
 .money-container {
-    background-color: var(--day-card-bg);
+    background-color: var(--midnight-gray);
     padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    border: 1px solid var(--day-border);
-    box-shadow: var(--day-shadow);
+    border: 1px solid var(--gold-dull);
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    transition: background-color var(--transition-medium), border-color var(--transition-medium), box-shadow var(--transition-medium);
-}
-
-body.night-theme .money-container {
-    background-color: var(--night-card-bg);
-    border-color: var(--night-border);
-    box-shadow: var(--night-shadow);
 }
 
 .money-label {
-    font-weight: bold;
+    font-weight: normal;
+    color: var(--ash-gray);
 }
 
 .money-amount {
     font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--cthulhu-gold);
+    color: var(--ghost-glow);
+    text-shadow: 0 0 10px rgba(144, 144, 160, 0.3);
 }
 
 .function-buttons {
@@ -325,30 +301,24 @@ body.night-theme .money-container {
 }
 
 .func-button {
-    background-color: var(--day-card-bg);
-    color: var(--day-text);
-    border: 1px solid var(--day-border);
+    background-color: var(--midnight-gray);
+    color: var(--bone-white);
+    border: 1px solid var(--shadow-gray);
     padding: 0.75rem 1.25rem;
     font-family: inherit;
     font-size: 0.95rem;
     cursor: pointer;
     transition: all var(--transition-fast);
-    border-radius: 6px;
     text-align: left;
-}
-
-body.night-theme .func-button {
-    background-color: var(--night-card-bg);
-    color: var(--night-text);
-    border-color: var(--night-border);
+    letter-spacing: 0.05em;
 }
 
 .func-button:hover {
+    background-color: var(--shadow-gray);
+    border-color: var(--old-cyan);
     transform: translateX(-4px);
-    border-color: var(--cthulhu-gold);
 }
 
-/* 主游戏区域 - 田地 */
 .game-area {
     flex: 1;
     padding: 2rem;
@@ -362,21 +332,20 @@ body.night-theme .func-button {
 
 .fields-container {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 1.5rem;
-    max-width: 600px;
-    max-height: 600px;
+    grid-template-columns: repeat(13, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 0.75rem;
+    max-width: 90vw;
+    max-height: 60vh;
     width: 100%;
     height: 100%;
-    aspect-ratio: 1;
+    padding: 1rem;
 }
 
 .field {
     aspect-ratio: 1;
-    background-color: var(--day-card-bg);
-    border: 2px solid var(--day-border);
-    border-radius: 8px;
+    background-color: var(--midnight-gray);
+    border: 2px solid var(--shadow-gray);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -387,82 +356,127 @@ body.night-theme .func-button {
     overflow: hidden;
 }
 
-body.night-theme .field {
-    background-color: var(--night-card-bg);
-    border-color: var(--night-border);
-}
-
 .field:hover {
     transform: scale(1.05);
-    border-color: var(--cthulhu-gold);
+    border-color: var(--old-cyan);
+    box-shadow: 0 0 20px rgba(26, 42, 58, 0.5);
 }
 
 .field.locked {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
     background: repeating-linear-gradient(
         45deg,
-        var(--day-card-bg),
-        var(--day-card-bg) 10px,
-        var(--day-border) 10px,
-        var(--day-border) 20px
+        var(--midnight-gray),
+        var(--midnight-gray) 10px,
+        var(--shadow-gray) 10px,
+        var(--shadow-gray) 20px
     );
+    border-color: var(--blood-red);
 }
 
-body.night-theme .field.locked {
-    background: repeating-linear-gradient(
-        45deg,
-        var(--night-card-bg),
-        var(--night-card-bg) 10px,
-        var(--night-border) 10px,
-        var(--night-border) 20px
-    );
+.field.locked:hover {
+    border-color: var(--flesh-red);
+    box-shadow: 0 0 20px rgba(90, 26, 26, 0.3);
 }
 
 .field-content {
     text-align: center;
     font-size: 1.5rem;
-    font-weight: bold;
     z-index: 2;
 }
 
-.plant-name {
+.locked-indicator {
     font-size: 1.2rem;
+    color: var(--blood-red);
+    margin-bottom: 0.5rem;
+}
+
+.unlock-price {
+    font-size: 0.9rem;
+    color: var(--gold-dull);
+}
+
+.plant-name {
+    font-size: 1rem;
     margin-top: 0.5rem;
+    color: var(--ash-gray);
 }
 
-/* 植物生长特效 */
 .plant-breathing {
-    animation: breathing 2s infinite ease-in-out;
+    animation: plant-breathing 3s infinite ease-in-out;
 }
 
-@keyframes breathing {
+@keyframes plant-breathing {
     0%, 100% {
         transform: scale(1);
         opacity: 1;
+        text-shadow: 0 0 5px rgba(144, 144, 160, 0.3);
     }
     50% {
-        transform: scale(1.15);
-        opacity: 0.8;
+        transform: scale(1.2);
+        opacity: 0.9;
+        text-shadow: 0 0 15px rgba(144, 144, 160, 0.5);
     }
+}
+
+.plant-stage-0 {
+    animation: plant-grow-0 2s infinite ease-in-out;
+}
+
+.plant-stage-1 {
+    animation: plant-grow-1 2s infinite ease-in-out;
+}
+
+.plant-stage-2 {
+    animation: plant-grow-2 2s infinite ease-in-out;
+}
+
+.plant-stage-3 {
+    animation: plant-grow-3 2s infinite ease-in-out;
+}
+
+@keyframes plant-grow-0 {
+    0%, 100% { transform: scale(0.6); opacity: 0.7; }
+    50% { transform: scale(0.8); opacity: 0.9; }
+}
+
+@keyframes plant-grow-1 {
+    0%, 100% { transform: scale(0.8); opacity: 0.8; }
+    50% { transform: scale(1.0); opacity: 1; }
+}
+
+@keyframes plant-grow-2 {
+    0%, 100% { transform: scale(0.9); opacity: 0.9; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+
+@keyframes plant-grow-3 {
+    0%, 100% { transform: scale(1.0); opacity: 0.95; }
+    50% { transform: scale(1.25); opacity: 1; }
 }
 
 .plant-growing {
-    animation: growing 0.5s ease-out;
+    animation: plant-sprout 0.8s ease-out;
 }
 
-@keyframes growing {
+@keyframes plant-sprout {
     0% {
-        transform: scale(0.5);
+        transform: scale(0.1);
         opacity: 0;
+        filter: blur(5px);
+    }
+    50% {
+        transform: scale(0.8);
+        opacity: 0.8;
     }
     100% {
         transform: scale(1);
         opacity: 1;
+        filter: blur(0);
     }
 }
 
-/* 田地状态指示器 */
 .field-status {
     position: absolute;
     bottom: 5px;
@@ -470,8 +484,8 @@ body.night-theme .field.locked {
     right: 5px;
     display: flex;
     justify-content: space-between;
-    font-size: 0.75rem;
-    opacity: 0.7;
+    font-size: 0.7rem;
+    opacity: 0.6;
 }
 
 .water-indicator,
@@ -482,39 +496,36 @@ body.night-theme .field.locked {
 }
 
 .water-indicator::before {
-    content: '💧';
+    content: '[水]';
+    color: var(--old-cyan);
 }
 
 .fertilizer-indicator::before {
-    content: '🌱';
+    content: '[肥]';
+    color: var(--mold-green);
 }
 
-/* 信息提示区 */
 .info-panel {
-    background-color: var(--day-card-bg);
+    background-color: var(--night-blue);
     padding: 1rem;
-    border-top: 1px solid var(--day-border);
-    transition: background-color var(--transition-medium), border-color var(--transition-medium);
-}
-
-body.night-theme .info-panel {
-    background-color: var(--night-card-bg);
-    border-color: var(--night-border);
+    border-top: 1px solid var(--old-cyan);
 }
 
 .info-content {
     text-align: center;
     font-size: 1rem;
+    color: var(--ash-gray);
+    font-style: italic;
+    letter-spacing: 0.05em;
 }
 
-/* 模态框样式 */
 .modal {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(13, 13, 18, 0.9);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -530,20 +541,13 @@ body.night-theme .info-panel {
 }
 
 .modal-content {
-    background-color: var(--day-card-bg);
-    border-radius: 8px;
-    border: 2px solid var(--day-border);
+    background-color: var(--midnight-gray);
+    border: 2px solid var(--old-cyan);
     width: 90%;
-    max-width: 500px;
+    max-width: 550px;
     max-height: 80vh;
     display: flex;
     flex-direction: column;
-    transition: background-color var(--transition-medium), border-color var(--transition-medium);
-}
-
-body.night-theme .modal-content {
-    background-color: var(--night-card-bg);
-    border-color: var(--night-border);
 }
 
 .modal-header {
@@ -551,15 +555,14 @@ body.night-theme .modal-content {
     justify-content: space-between;
     align-items: center;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--day-border);
-}
-
-body.night-theme .modal-header {
-    border-color: var(--night-border);
+    border-bottom: 1px solid var(--shadow-gray);
 }
 
 .modal-header h2 {
     font-size: 1.3rem;
+    font-weight: normal;
+    letter-spacing: 0.1em;
+    color: var(--ghost-glow);
 }
 
 .close-btn {
@@ -567,22 +570,17 @@ body.night-theme .modal-header {
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: inherit;
+    color: var(--ash-gray);
     width: 30px;
     height: 30px;
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 50%;
-    transition: background-color var(--transition-fast);
+    transition: color var(--transition-fast);
 }
 
 .close-btn:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-body.night-theme .close-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--blood-red);
 }
 
 .modal-body {
@@ -591,48 +589,39 @@ body.night-theme .close-btn:hover {
     flex: 1;
 }
 
-/* 选项卡样式 */
 .inventory-tabs,
 .merchant-tabs {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1rem;
-    border-bottom: 1px solid var(--day-border);
+    border-bottom: 1px solid var(--shadow-gray);
     padding-bottom: 0.5rem;
-}
-
-body.night-theme .inventory-tabs,
-body.night-theme .merchant-tabs {
-    border-color: var(--night-border);
 }
 
 .tab-button {
     background: none;
     border: none;
-    color: inherit;
+    color: var(--ash-gray);
     font-family: inherit;
     font-size: 0.95rem;
     padding: 0.5rem 1rem;
     cursor: pointer;
-    border-radius: 4px 4px 0 0;
     transition: all var(--transition-fast);
     opacity: 0.7;
+    letter-spacing: 0.05em;
 }
 
 .tab-button.active {
     opacity: 1;
-    background-color: var(--day-border);
-}
-
-body.night-theme .tab-button.active {
-    background-color: var(--night-border);
+    color: var(--ghost-glow);
+    border-bottom: 2px solid var(--old-cyan);
 }
 
 .tab-button:hover {
     opacity: 1;
+    color: var(--bone-white);
 }
 
-/* 物品列表样式 */
 .inventory-content,
 .merchant-content,
 .market-content,
@@ -643,9 +632,8 @@ body.night-theme .tab-button.active {
 }
 
 .item-card {
-    background-color: var(--day-bg);
-    border: 1px solid var(--day-border);
-    border-radius: 6px;
+    background-color: var(--crow-gray);
+    border: 1px solid var(--shadow-gray);
     padding: 1rem;
     text-align: center;
     cursor: pointer;
@@ -653,68 +641,63 @@ body.night-theme .tab-button.active {
     position: relative;
 }
 
-body.night-theme .item-card {
-    background-color: var(--night-bg);
-    border-color: var(--night-border);
-}
-
 .item-card:hover {
+    background-color: var(--shadow-gray);
+    border-color: var(--old-cyan);
     transform: translateY(-2px);
-    border-color: var(--cthulhu-gold);
 }
 
 .item-card.selected {
-    border-color: var(--cthulhu-gold);
-    box-shadow: 0 0 10px rgba(138, 122, 58, 0.3);
+    border-color: var(--ghost-glow);
+    box-shadow: 0 0 15px rgba(144, 144, 160, 0.3);
+    background-color: var(--night-blue);
 }
 
 .item-name {
-    font-weight: bold;
+    font-weight: normal;
     margin-bottom: 0.5rem;
-    font-size: 1rem;
+    font-size: 0.95rem;
+    color: var(--bone-white);
+    letter-spacing: 0.05em;
 }
 
 .item-info {
-    font-size: 0.85rem;
-    opacity: 0.8;
+    font-size: 0.8rem;
+    color: var(--ash-gray);
 }
 
 .item-count {
     position: absolute;
     top: 5px;
     right: 5px;
-    background-color: var(--cthulhu-gold);
-    color: var(--day-text);
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
+    background-color: var(--old-cyan);
+    color: var(--bone-white);
+    width: 22px;
+    height: 22px;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 0.75rem;
-    font-weight: bold;
 }
 
-/* 商人价格标签 */
 .item-price {
     margin-top: 0.5rem;
     font-size: 0.9rem;
-    color: var(--cthulhu-gold);
-    font-weight: bold;
+    color: var(--ghost-glow);
 }
 
-/* 开发人员内容 */
 .developer-content {
     text-align: center;
-    line-height: 1.8;
+    line-height: 2;
+    color: var(--ash-gray);
 }
 
 .developer-content .dark-energy {
     margin-top: 2rem;
     font-size: 0.8rem;
+    color: var(--abyss-purple);
 }
 
-/* 操作按钮样式 */
 .action-buttons {
     display: flex;
     gap: 0.5rem;
@@ -723,25 +706,19 @@ body.night-theme .item-card {
 }
 
 .action-btn {
-    background-color: var(--day-bg);
-    border: 1px solid var(--day-border);
-    color: var(--day-text);
+    background-color: var(--midnight-gray);
+    border: 1px solid var(--shadow-gray);
+    color: var(--bone-white);
     padding: 0.5rem 1rem;
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     cursor: pointer;
-    border-radius: 4px;
     transition: all var(--transition-fast);
 }
 
-body.night-theme .action-btn {
-    background-color: var(--night-bg);
-    border-color: var(--night-border);
-    color: var(--night-text);
-}
-
 .action-btn:hover {
-    border-color: var(--cthulhu-gold);
+    background-color: var(--shadow-gray);
+    border-color: var(--old-cyan);
 }
 
 .action-btn:disabled {
@@ -749,47 +726,56 @@ body.night-theme .action-btn {
     cursor: not-allowed;
 }
 
-/* 成熟植物高亮 */
 .ready-to-harvest {
-    border-color: var(--cthulhu-gold) !important;
-    box-shadow: 0 0 15px rgba(138, 122, 58, 0.5);
+    border-color: var(--gold-dull) !important;
+    box-shadow: 0 0 20px rgba(90, 74, 42, 0.5);
+    animation: harvest-glow 2s infinite;
+}
+
+@keyframes harvest-glow {
+    0%, 100% { 
+        box-shadow: 0 0 15px rgba(90, 74, 42, 0.4);
+    }
+    50% { 
+        box-shadow: 0 0 25px rgba(144, 144, 160, 0.6);
+    }
 }
 
 .ready-to-harvest .plant-name {
-    color: var(--cthulhu-gold);
+    color: var(--ghost-glow);
     animation: pulse 1s infinite;
 }
 
-/* 提示消息样式 */
+.ready-to-harvest .field-content {
+    animation: harvest-pulse 1.5s infinite;
+}
+
+@keyframes harvest-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
 .toast {
     position: fixed;
-    bottom: 20px;
+    bottom: 80px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: var(--day-card-bg);
-    color: var(--day-text);
+    background-color: var(--midnight-gray);
+    color: var(--bone-white);
     padding: 1rem 2rem;
-    border-radius: 8px;
-    border: 1px solid var(--day-border);
-    box-shadow: var(--day-shadow);
+    border: 1px solid var(--old-cyan);
     z-index: 2000;
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--transition-fast);
-}
-
-body.night-theme .toast {
-    background-color: var(--night-card-bg);
-    border-color: var(--night-border);
-    box-shadow: var(--night-shadow);
-    color: var(--night-text);
+    font-style: italic;
+    letter-spacing: 0.05em;
 }
 
 .toast.show {
     opacity: 1;
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
     .game-title {
         font-size: 2rem;
@@ -817,7 +803,7 @@ body.night-theme .toast {
     }
     
     .func-button {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         padding: 0.5rem 0.75rem;
     }
     
@@ -848,5 +834,381 @@ body.night-theme .toast {
     
     .function-buttons {
         justify-content: center;
+    }
+}
+
+.price-up {
+    color: #5a7a5a !important;
+}
+
+.price-down {
+    color: #7a5a5a !important;
+}
+
+.price-flat {
+    color: var(--ash-gray) !important;
+}
+
+::selection {
+    background: var(--abyss-purple);
+    color: var(--bone-white);
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--midnight-gray);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--shadow-gray);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--old-cyan);
+}
+
+.nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 3rem;
+    color: var(--ghost-glow);
+    background: rgba(30, 30, 42, 0.8);
+    border: 2px solid var(--old-cyan);
+    width: 60px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    z-index: 50;
+    font-family: serif;
+}
+
+.nav-arrow:hover {
+    background: var(--old-cyan);
+    border-color: var(--ghost-glow);
+    box-shadow: 0 0 20px rgba(144, 144, 160, 0.5);
+}
+
+.nav-arrow.hidden {
+    display: none;
+}
+
+#nav-left {
+    left: 10px;
+}
+
+#nav-right {
+    right: 10px;
+}
+
+.game-view {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transition: opacity var(--transition-medium), visibility var(--transition-medium);
+}
+
+.game-view.active {
+    opacity: 1;
+    visibility: visible;
+    z-index: 5;
+}
+
+.game-view.hidden {
+    opacity: 0;
+    visibility: hidden;
+    z-index: 1;
+}
+
+.sanity-container,
+.pollution-container {
+    background-color: var(--midnight-gray);
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--shadow-gray);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 120px;
+}
+
+.sanity-label,
+.pollution-label {
+    font-size: 0.8rem;
+    color: var(--ash-gray);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sanity-amount,
+.pollution-amount {
+    color: var(--ghost-glow);
+}
+
+.sanity-level {
+    font-size: 0.75rem;
+    color: var(--old-cyan);
+}
+
+.pollution-level {
+    font-size: 0.75rem;
+    color: var(--blood-red);
+}
+
+.sanity-bar,
+.pollution-bar {
+    height: 6px;
+    background: var(--shadow-gray);
+    position: relative;
+    overflow: hidden;
+}
+
+.sanity-progress,
+.pollution-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.sanity-progress {
+    background: linear-gradient(90deg, var(--old-cyan), var(--ghost-glow));
+}
+
+.pollution-progress {
+    background: linear-gradient(90deg, var(--mold-green), var(--blood-red));
+}
+
+.barn-view {
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    gap: 1rem;
+    height: 100%;
+}
+
+.barn-info-bar {
+    background-color: var(--midnight-gray);
+    padding: 1rem;
+    border: 2px solid var(--shadow-gray);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.barn-stats {
+    display: flex;
+    gap: 2rem;
+    font-size: 1rem;
+    color: var(--bone-white);
+}
+
+.barn-upgrade {
+    display: flex;
+    align-items: center;
+}
+
+.upgrade-barn-btn {
+    background-color: var(--abyss-purple);
+    color: var(--bone-white);
+    border: 1px solid var(--old-cyan);
+    padding: 0.5rem 1rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.upgrade-barn-btn:hover {
+    background-color: var(--old-cyan);
+    box-shadow: 0 0 15px rgba(144, 144, 160, 0.3);
+}
+
+.barn-container {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    overflow-y: auto;
+    padding: 1rem;
+    align-content: start;
+}
+
+.animal-card {
+    background-color: var(--midnight-gray);
+    border: 2px solid var(--shadow-gray);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.animal-card:hover {
+    border-color: var(--old-cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(26, 42, 58, 0.5);
+}
+
+.animal-icon {
+    font-size: 2.5rem;
+}
+
+.animal-name {
+    font-size: 1rem;
+    color: var(--bone-white);
+}
+
+.animal-status {
+    font-size: 0.8rem;
+    color: var(--ash-gray);
+    min-height: 1.5em;
+}
+
+.product-ready {
+    color: var(--gold-dull);
+    font-weight: bold;
+    animation: pulse 1.5s infinite;
+}
+
+.product-timer {
+    color: var(--ash-gray);
+}
+
+.animal-actions {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.collect-btn {
+    background-color: var(--mold-green);
+    color: var(--bone-white);
+    border: 1px solid var(--old-cyan);
+    padding: 0.4rem 0.8rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.collect-btn:hover {
+    background-color: var(--old-cyan);
+}
+
+.empty-barn {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--ash-gray);
+    font-size: 1.1rem;
+    gap: 0.5rem;
+}
+
+.empty-barn .hint {
+    font-size: 0.9rem;
+    opacity: 0.6;
+    font-style: italic;
+}
+
+.log-button {
+    background-color: var(--midnight-gray);
+    color: var(--bone-white);
+    border: 1px solid var(--shadow-gray);
+    padding: 0.5rem 1rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-left: 0.5rem;
+}
+
+.log-button:hover {
+    background-color: var(--shadow-gray);
+    border-color: var(--old-cyan);
+}
+
+.log-entry {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--shadow-gray);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-time {
+    font-size: 0.7rem;
+    color: var(--ash-gray);
+    opacity: 0.6;
+}
+
+.log-message {
+    font-size: 0.9rem;
+    color: var(--bone-white);
+}
+
+.log-entry[data-log-type="warning"] .log-message {
+    color: #8a6a4a;
+}
+
+.log-entry[data-log-type="danger"] .log-message {
+    color: #7a4a4a;
+}
+
+.log-entry[data-log-type="success"] .log-message {
+    color: #4a7a4a;
+}
+
+.log-content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+    .sanity-container,
+    .pollution-container {
+        min-width: 100px;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    .barn-info-bar {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .barn-stats {
+        gap: 1rem;
+    }
+    
+    .nav-arrow {
+        font-size: 2rem;
+        width: 50px;
+        height: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .barn-container {
+        grid-template-columns: 1fr;
     }
 }
