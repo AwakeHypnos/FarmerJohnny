@@ -18,14 +18,10 @@ class FarmingModule {
         this.setupListeners();
     }
 
-    getUnlockPrice(unlockedCount) {
+    getUnlockPrice(fieldId) {
         const basePrice = 100;
         const priceIncrement = 50;
-        return basePrice + (unlockedCount - 1) * priceIncrement;
-    }
-
-    getNextUnlockPrice() {
-        return this.getUnlockPrice(this.unlockedFields);
+        return basePrice + fieldId * priceIncrement;
     }
 
     canUnlockField(fieldId) {
@@ -34,7 +30,7 @@ class FarmingModule {
             return { canUnlock: false, reason: '田地已解锁或无效' };
         }
 
-        const price = this.getNextUnlockPrice();
+        const price = this.getUnlockPrice(fieldId);
         if (!this.gameState.hasEnoughMoney(price)) {
             return { canUnlock: false, reason: `资金不足，需要 ${price} 金币`, price };
         }
@@ -201,7 +197,7 @@ class FarmingModule {
             this.eventBus.emit('farming:showUnlockOption', {
                 fieldId,
                 canUnlock: check.canUnlock,
-                price: check.price || this.getNextUnlockPrice(),
+                price: check.price || this.getUnlockPrice(fieldId),
                 reason: check.reason
             });
             return;
