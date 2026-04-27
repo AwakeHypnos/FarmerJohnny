@@ -106,6 +106,7 @@ class LivestockModule {
         this.eventBus.on('time:hourChanged', () => {
             this.updateBaits();
             this.trySpawnWildAnimal();
+            this.updateWildAnimalDeparture();
             this.updateAnimalTimers(60);
         });
 
@@ -132,6 +133,25 @@ class LivestockModule {
 
         this.eventBus.on('ui:upgradeBarn', () => {
             this.upgradeBarn();
+        });
+    }
+
+    updateWildAnimalDeparture() {
+        const currentTime = this.timeModule.getDay() * 24 + this.timeModule.getHour();
+        const maxStayHours = 12;
+
+        const departingAnimals = [];
+        this.wildAnimals = this.wildAnimals.filter(animal => {
+            const stayTime = currentTime - animal.spawnTime;
+            if (stayTime >= maxStayHours) {
+                departingAnimals.push(animal);
+                return false;
+            }
+            return true;
+        });
+
+        departingAnimals.forEach(animal => {
+            this.eventBus.emit('livestock:wildAnimalDeparted', animal);
         });
     }
 

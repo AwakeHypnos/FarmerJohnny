@@ -1,11 +1,12 @@
 class InteractionManager {
-    constructor(eventBus, farmingModule, economyModule, sanityModule, pollutionModule, livestockModule, uiRenderer) {
+    constructor(eventBus, farmingModule, economyModule, sanityModule, pollutionModule, livestockModule, sleepModule, uiRenderer) {
         this.eventBus = eventBus;
         this.farmingModule = farmingModule;
         this.economyModule = economyModule;
         this.sanityModule = sanityModule;
         this.pollutionModule = pollutionModule;
         this.livestockModule = livestockModule;
+        this.sleepModule = sleepModule;
         this.uiRenderer = uiRenderer;
 
         this.currentFieldActions = null;
@@ -74,6 +75,10 @@ class InteractionManager {
             this.uiRenderer.hideModal('log');
         });
 
+        this.eventBus.on('ui:sleep', (hours) => {
+            this.handleSleep(hours);
+        });
+
         this.eventBus.on('input:backpackTabChanged', (tabType) => {
             this.uiRenderer.renderBackpackContent(tabType);
         });
@@ -139,6 +144,10 @@ class InteractionManager {
             this.handleBuyCrop(cropType);
         });
 
+        this.eventBus.on('ui:buyTrap', (trapType) => {
+            this.handleBuyTrap(trapType);
+        });
+
         this.eventBus.on('ui:sellCrop', (cropType) => {
             this.handleSellCrop(cropType);
         });
@@ -146,6 +155,15 @@ class InteractionManager {
         this.eventBus.on('ui:moveFromWarehouse', (data) => {
             this.handleMoveFromWarehouse(data.itemType, data.category);
         });
+    }
+
+    handleSleep(hours) {
+        if (!this.sleepModule) return;
+        
+        const result = this.sleepModule.startSleep(hours);
+        if (!result.success) {
+            this.uiRenderer.showInfo(result.reason, 'warning');
+        }
     }
 
     handleUpgradeBarn() {
@@ -448,6 +466,21 @@ class InteractionManager {
             this.uiRenderer.showInfo(`成功购买了${plantData ? plantData.name : cropType}！`);
             this.uiRenderer.updateMoneyDisplay();
             this.uiRenderer.renderMerchantContent('merchant-crops');
+        } else {
+            this.uiRenderer.showInfo(result.reason);
+        }
+    }
+
+    handleBuyTrap(trapType) {
+        const result = this.economyModule.buyTrap(trapType);
+        if (result.success) {
+            const AnimalConfig = window.AnimalConfig || {};
+            const trap = AnimalConfig.getCaptureTool ? 
+                AnimalConfig.getCaptureTool(trapType) : 
+                (AnimalConfig._captureTools ? AnimalConfig._captureTools[trapType] : null);
+            this.uiRenderer.showInfo(`成功购买了${trap ? trap.name : trapType}！`);
+            this.uiRenderer.updateMoneyDisplay();
+            this.uiRenderer.renderMerchantContent('merchant-traps');
         } else {
             this.uiRenderer.showInfo(result.reason);
         }

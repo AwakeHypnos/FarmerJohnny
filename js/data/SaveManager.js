@@ -4,7 +4,7 @@ class SaveManager {
         this.storageKey = 'farmerJohnny_save';
     }
 
-    save(gameState, timeModule, farmingModule, sanityModule, pollutionModule, livestockModule) {
+    save(gameState, timeModule, farmingModule, sanityModule, pollutionModule, livestockModule, sleepModule) {
         try {
             const saveData = {
                 gameState: gameState.getFullState(),
@@ -13,6 +13,7 @@ class SaveManager {
                 sanityState: sanityModule ? sanityModule.getState() : null,
                 pollutionState: pollutionModule ? pollutionModule.getState() : null,
                 livestockState: livestockModule ? livestockModule.getState() : null,
+                sleepState: sleepModule ? sleepModule.getFullState() : null,
                 savedAt: new Date().toISOString()
             };
 
@@ -26,7 +27,7 @@ class SaveManager {
         }
     }
 
-    load(gameState, timeModule, farmingModule, sanityModule, pollutionModule, livestockModule) {
+    load(gameState, timeModule, farmingModule, sanityModule, pollutionModule, livestockModule, sleepModule) {
         try {
             const saveData = localStorage.getItem(this.storageKey);
 
@@ -59,6 +60,10 @@ class SaveManager {
 
             if (parsedData.livestockState && livestockModule) {
                 livestockModule.loadState(parsedData.livestockState);
+            }
+
+            if (parsedData.sleepState && sleepModule) {
+                sleepModule.loadState(parsedData.sleepState);
             }
 
             this.eventBus.emit('load:success', parsedData);

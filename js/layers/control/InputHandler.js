@@ -46,6 +46,10 @@ class InputHandler {
             this.eventBus.emit('input:showLog');
         });
 
+        this.eventBinder.bindClick('sleep-btn', () => {
+            this.eventBus.emit('input:showSleep');
+        });
+
         this.eventBinder.bindClick('close-backpack', () => {
             this.eventBus.emit('input:hideBackpack');
         });
@@ -68,6 +72,10 @@ class InputHandler {
 
         this.eventBinder.bindClick('close-log', () => {
             this.eventBus.emit('input:hideLog');
+        });
+
+        this.eventBinder.bindClick('close-sleep', () => {
+            this.eventBus.emit('input:hideSleep');
         });
     }
 

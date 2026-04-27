@@ -1,5 +1,5 @@
 class UIRenderer {
-    constructor(eventBus, timeModule, gameState, farmingModule, economyModule, sanityModule, pollutionModule, livestockModule, animationManager, effectManager) {
+    constructor(eventBus, timeModule, gameState, farmingModule, economyModule, sanityModule, pollutionModule, livestockModule, sleepModule, animationManager, effectManager) {
         this.eventBus = eventBus;
         this.timeModule = timeModule;
         this.gameState = gameState;
@@ -8,6 +8,7 @@ class UIRenderer {
         this.sanityModule = sanityModule;
         this.pollutionModule = pollutionModule;
         this.livestockModule = livestockModule;
+        this.sleepModule = sleepModule;
         this.animationManager = animationManager;
         this.effectManager = effectManager;
 
@@ -55,6 +56,7 @@ class UIRenderer {
         this.marketContent = document.getElementById('market-content');
         this.warehouseContent = document.getElementById('warehouse-content');
         this.logContent = document.getElementById('log-content');
+        this.sleepContent = document.getElementById('sleep-content');
 
         this.modals = {
             backpack: document.getElementById('backpack-modal'),
@@ -62,7 +64,8 @@ class UIRenderer {
             market: document.getElementById('market-modal'),
             warehouse: document.getElementById('warehouse-modal'),
             developer: document.getElementById('developer-modal'),
-            log: document.getElementById('log-modal')
+            log: document.getElementById('log-modal'),
+            sleep: document.getElementById('sleep-modal')
         };
     }
 
@@ -165,6 +168,11 @@ class UIRenderer {
             this.renderWildAnimals();
         });
 
+        this.eventBus.on('livestock:wildAnimalDeparted', (data) => {
+            this.showInfo(`${data.name}离开了。`, 'info');
+            this.renderWildAnimals();
+        });
+
         this.eventBus.on('livestock:baitPlaced', (data) => {
             this.showInfo(`放置了${data.cropName}作为诱饵！`, 'info');
             this.renderBaits();
@@ -207,6 +215,33 @@ class UIRenderer {
 
         this.eventBus.on('ui:switchToBarn', () => {
             this.switchToBarn();
+        });
+
+        this.eventBus.on('input:showSleep', () => {
+            this.showModal('sleep');
+            this.renderSleepContent();
+        });
+
+        this.eventBus.on('input:hideSleep', () => {
+            this.hideModal('sleep');
+        });
+
+        this.eventBus.on('sleep:completed', (data) => {
+            this.hideModal('sleep');
+            const hoursText = data.hoursSlept.toFixed(1);
+            if (data.isPoorSleep) {
+                this.showInfo(`只睡了${hoursText}小时，感觉不太好...`, 'warning');
+            } else {
+                this.showInfo(`睡了${hoursText}小时，精神焕发！`, 'success');
+            }
+        });
+
+        this.eventBus.on('sleep:debuffAdded', (data) => {
+            this.showInfo(`出现睡眠不足Debuff：${data.reason}`, 'danger');
+        });
+
+        this.eventBus.on('sleep:debuffRemoved', (data) => {
+            this.showInfo('睡眠不足Debuff已消失', 'success');
         });
     }
 
@@ -765,6 +800,52 @@ class UIRenderer {
                 
                 this.merchantContent.appendChild(card);
             });
+        } else if (tabType === 'merchant-traps') {
+            const AnimalConfig = window.AnimalConfig || {};
+            const traps = this.economyModule.getAllAvailableTrapsForSale ? 
+                this.economyModule.getAllAvailableTrapsForSale() : [];
+            
+            if (traps.length === 0) {
+                this.merchantContent.innerHTML = '<div style="grid-column: 1/-1; text-align: center; opacity: 0.7;">暂无陷阱售卖</div>';
+                return;
+            }
+
+            const currentTraps = this.gameState.getAvailableCaptureTools ? 
+                this.gameState.getAvailableCaptureTools() : [];
+            const trapCounts = {};
+            currentTraps.forEach(t => {
+                trapCounts[t.type] = t.count;
+            });
+
+            traps.forEach(trap => {
+                const extraInfo = [];
+                if (trap.captureBonus > 0) {
+                    extraInfo.push(`捕捉加成+${Math.round(trap.captureBonus * 100)}%`);
+                }
+                if (trap.canCaptureRare) {
+                    extraInfo.push('可捕捉稀有动物');
+                }
+                if (trap.canCaptureTaboo) {
+                    extraInfo.push('可捕捉禁忌生物');
+                }
+                const currentCount = trapCounts[trap.id] || 0;
+
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.innerHTML = `
+                    <div class="item-name">${trap.name}</div>
+                    <div class="item-info">${trap.description}</div>
+                    ${extraInfo.length > 0 ? `<div class="item-info" style="font-size: 0.85rem; color: var(--primary-green);">${extraInfo.join('、')}</div>` : ''}
+                    <div class="item-price">${trap.buyPrice}金币</div>
+                    <div class="item-info" style="font-size: 0.8rem; opacity: 0.7;">当前持有: ${currentCount}个</div>
+                `;
+                
+                card.addEventListener('click', () => {
+                    this.eventBus.emit('ui:buyTrap', trap.id);
+                });
+                
+                this.merchantContent.appendChild(card);
+            });
         }
     }
 
@@ -1143,7 +1224,7 @@ class UIRenderer {
             const confirmBtn = document.getElementById('confirm-capture-btn');
             
             if (toolDisplay && selectedToolType) {
-                const toolDisplay.textContent = selectedToolType;
+                toolDisplay.textContent = selectedToolType;
             }
             
             if (confirmBtn) {
@@ -1229,6 +1310,100 @@ class UIRenderer {
                 modal.remove();
             }
         });
+    }
+
+    renderSleepContent() {
+        if (!this.sleepContent) return;
+
+        const availableHours = this.sleepModule ? 
+            this.sleepModule.getAvailableSleepHours() : 
+            (this.timeModule.getHour() >= 20 ? 10 : 0);
+        
+        const hasSleepDeprivation = this.sleepModule ? 
+            this.sleepModule.hasSleepDeprivation() : false;
+        
+        const consecutivePoorSleep = this.sleepModule ? 
+            this.sleepModule.getConsecutivePoorSleepDays() : 0;
+
+        this.sleepContent.innerHTML = '';
+
+        if (availableHours <= 0) {
+            this.sleepContent.innerHTML = `
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">☀️</div>
+                    <div style="color: var(--ash-gray);">现在是白天，无法睡觉</div>
+                    <div style="font-size: 0.85rem; opacity: 0.7; margin-top: 0.5rem;">
+                        睡觉时间：晚上 20:00 - 早上 06:00
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const statusHtml = `
+            <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                <div style="margin-bottom: 0.5rem; font-weight: bold;">睡眠状态</div>
+                <div style="font-size: 0.9rem; color: var(--ash-gray);">
+                    当前可睡眠时长：<span style="color: var(--old-cyan);">${availableHours}小时</span>
+                </div>
+                ${consecutivePoorSleep > 0 ? `
+                    <div style="font-size: 0.9rem; color: ${hasSleepDeprivation ? '#ff6b6b' : 'var(--ash-gray)'};">
+                        连续睡眠不足天数：<span style="color: var(--algae-red);">${consecutivePoorSleep}天</span>
+                    </div>
+                ` : ''}
+                ${hasSleepDeprivation ? `
+                    <div style="font-size: 0.9rem; color: #ff6b6b; margin-top: 0.5rem;">
+                        ⚠️ 状态：睡眠不足Debuff（理智值降低）
+                    </div>
+                ` : ''}
+            </div>
+            <div style="margin-bottom: 1rem; color: var(--ash-gray); font-size: 0.9rem;">
+                <div>• 睡眠 7.5 小时及以上：回复 100 理智值</div>
+                <div>• 睡眠不足 7.5 小时：按比例回复理智值</div>
+                <div>• 连续 3 天睡眠不足 3 小时：触发睡眠不足Debuff</div>
+            </div>
+            <div style="margin-bottom: 1rem; font-weight: bold;">选择睡眠时间：</div>
+        `;
+        this.sleepContent.innerHTML = statusHtml;
+
+        const sleepOptions = [];
+        if (availableHours >= 3) sleepOptions.push({ hours: 3, label: '3小时 (小睡)' });
+        if (availableHours >= 4.5) sleepOptions.push({ hours: 4.5, label: '4.5小时' });
+        if (availableHours >= 6) sleepOptions.push({ hours: 6, label: '6小时' });
+        if (availableHours >= 7.5) sleepOptions.push({ hours: 7.5, label: '7.5小时 (推荐)' });
+        if (availableHours >= 9) sleepOptions.push({ hours: 9, label: '9小时 (充足)' });
+        if (availableHours >= 10) sleepOptions.push({ hours: availableHours, label: `${availableHours}小时 (睡到天亮)` });
+
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'inventory-content';
+
+        sleepOptions.forEach(option => {
+            const isOptimal = option.hours >= 7.5;
+            const isPoor = option.hours < 3;
+            
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            if (isOptimal) card.style.borderColor = 'var(--primary-green)';
+            if (isPoor) card.style.borderColor = 'var(--algae-red)';
+            
+            const sanityRestore = option.hours >= 7.5 ? 100 : Math.floor((option.hours / 7.5) * 100);
+            
+            card.innerHTML = `
+                <div class="item-name">${option.label}</div>
+                <div class="item-info" style="${isOptimal ? 'color: var(--primary-green);' : isPoor ? 'color: var(--algae-red);' : ''}">
+                    预计回复理智：${sanityRestore}点
+                </div>
+                ${isPoor ? '<div class="item-info" style="color: var(--algae-red); font-size: 0.8rem;">⚠️ 睡眠不足，可能影响健康</div>' : ''}
+            `;
+            
+            card.addEventListener('click', () => {
+                this.eventBus.emit('ui:sleep', option.hours);
+            });
+            
+            optionsContainer.appendChild(card);
+        });
+
+        this.sleepContent.appendChild(optionsContainer);
     }
 
     updateLoadButtonState(hasSave) {

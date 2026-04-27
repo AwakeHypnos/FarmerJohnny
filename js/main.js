@@ -42,6 +42,13 @@ class FarmerJohnnyApp {
             this.pollutionModule
         );
 
+        this.sleepModule = new SleepModule(
+            this.eventBus,
+            this.gameState,
+            this.timeModule,
+            this.sanityModule
+        );
+
         this.animationManager = new AnimationManager(this.eventBus);
         this.effectManager = new EffectManager(this.eventBus);
 
@@ -54,6 +61,7 @@ class FarmerJohnnyApp {
             this.sanityModule,
             this.pollutionModule,
             this.livestockModule,
+            this.sleepModule,
             this.animationManager,
             this.effectManager
         );
@@ -67,6 +75,7 @@ class FarmerJohnnyApp {
             this.sanityModule,
             this.pollutionModule,
             this.livestockModule,
+            this.sleepModule,
             this.uiRenderer
         );
 
@@ -159,7 +168,8 @@ class FarmerJohnnyApp {
             this.farmingModule,
             this.sanityModule,
             this.pollutionModule,
-            this.livestockModule
+            this.livestockModule,
+            this.sleepModule
         );
 
         if (success) {
@@ -213,7 +223,8 @@ class FarmerJohnnyApp {
             this.farmingModule,
             this.sanityModule,
             this.pollutionModule,
-            this.livestockModule
+            this.livestockModule,
+            this.sleepModule
         );
     }
 
@@ -224,7 +235,8 @@ class FarmerJohnnyApp {
             this.farmingModule,
             this.sanityModule,
             this.pollutionModule,
-            this.livestockModule
+            this.livestockModule,
+            this.sleepModule
         );
 
         if (success) {

@@ -275,6 +275,45 @@ class EconomyModule {
         return { success: true };
     }
 
+    buyTrap(trapType) {
+        const AnimalConfig = window.AnimalConfig || {};
+        const trap = AnimalConfig.getCaptureTool ? 
+            AnimalConfig.getCaptureTool(trapType) : 
+            (AnimalConfig._captureTools ? AnimalConfig._captureTools[trapType] : null);
+
+        if (!trap) {
+            return { success: false, reason: '陷阱不存在' };
+        }
+
+        const price = trap.buyPrice;
+
+        if (!this.gameState.hasEnoughMoney(price)) {
+            this.eventBus.emit('economy:notEnoughMoney');
+            return { success: false, reason: '资金不足' };
+        }
+
+        this.gameState.subtractMoney(price);
+        this.gameState.addCaptureTool(trapType);
+
+        this.eventBus.emit('economy:trapBought', {
+            trapType,
+            trapName: trap.name,
+            price
+        });
+        this.eventBus.emit('economy:moneyChanged', this.getMoney());
+
+        return { success: true };
+    }
+
+    getAllAvailableTrapsForSale() {
+        const AnimalConfig = window.AnimalConfig || {};
+        const traps = AnimalConfig.getAllCaptureTools ? 
+            AnimalConfig.getAllCaptureTools() : 
+            (AnimalConfig._captureTools ? Object.values(AnimalConfig._captureTools) : []);
+
+        return traps;
+    }
+
     getAllAvailableCropsForSale() {
         const PlantConfig = window.PlantConfig || {};
         const crops = [];
