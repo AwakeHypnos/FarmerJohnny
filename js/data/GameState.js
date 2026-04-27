@@ -97,7 +97,11 @@ class GameState {
             const currentCount = this.fertilizers[itemType] || 0;
             return currentCount + count <= this.config.inventoryStackLimit;
         }
-        const currentCount = this.inventory[category][itemType] || 0;
+        if (category === 'captureTools') {
+            const currentCount = this.captureTools[itemType] || 0;
+            return currentCount + count <= this.config.inventoryStackLimit;
+        }
+        const currentCount = this.inventory[category] ? (this.inventory[category][itemType] || 0) : 0;
         return currentCount + count <= this.config.inventoryStackLimit;
     }
 

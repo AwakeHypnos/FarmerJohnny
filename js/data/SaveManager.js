@@ -10,9 +10,9 @@ class SaveManager {
                 gameState: gameState.getFullState(),
                 timeState: timeModule.getTimeState(),
                 fields: farmingModule.getFieldsState(),
-                sanityState: sanityModule ? sanityModule.getState() : null,
-                pollutionState: pollutionModule ? pollutionModule.getState() : null,
-                livestockState: livestockModule ? livestockModule.getState() : null,
+                sanityState: sanityModule ? sanityModule.getFullState() : null,
+                pollutionState: pollutionModule ? pollutionModule.getFullState() : null,
+                livestockState: livestockModule ? livestockModule.getFullState() : null,
                 sleepState: sleepModule ? sleepModule.getFullState() : null,
                 savedAt: new Date().toISOString()
             };
