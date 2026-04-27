@@ -15,8 +15,6 @@ class LivestockModule {
     init() {
         this.wildAnimals = [];
         this.maxWildAnimals = 3;
-        this.gameState.state.livestock.animals = [];
-        this.gameState.state.livestock.barnLevel = 1;
     }
 
     setupListeners() {
