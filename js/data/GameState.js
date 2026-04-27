@@ -435,7 +435,7 @@ class GameState {
         return this.getAnimalCount() < this.getBarnCapacity();
     }
 
-    addAnimal(animalId, domesticatedId) {
+    addAnimal(animalId, domesticatedId, initialProduceDelay = 3 * 24 * 60) {
         if (!this.canAddAnimal()) {
             return { success: false, reason: '畜栏已满，请先升级畜栏' };
         }
@@ -454,7 +454,7 @@ class GameState {
             type: domesticatedId,
             wildType: animalId,
             age: 0,
-            produceTimer: 0,
+            produceTimer: -initialProduceDelay,
             hungry: false,
             sick: false,
             acquiredAt: Date.now()

@@ -76,6 +76,7 @@
                         <button class="func-button" id="merchant-btn">商人</button>
                         <button class="func-button" id="market-btn">市场</button>
                         <button class="func-button" id="warehouse-btn">仓库</button>
+                        <button class="func-button" id="sleep-btn">睡觉</button>
                     </div>
                 </div>
 
@@ -155,6 +156,7 @@
                         <button class="tab-button active" data-tab="merchant-seeds">当季种子</button>
                         <button class="tab-button" data-tab="merchant-crops">作物</button>
                         <button class="tab-button" data-tab="merchant-fertilizer">肥料</button>
+                        <button class="tab-button" data-tab="merchant-traps">陷阱</button>
                     </div>
                     <div class="merchant-content" id="merchant-content">
                         <!-- 商人商品将通过JavaScript动态生成 -->
@@ -230,6 +232,21 @@
                 </div>
             </div>
         </div>
+
+        <!-- 睡觉弹窗 -->
+        <div id="sleep-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>睡觉</h2>
+                    <button class="close-btn" id="close-sleep">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="sleep-content" id="sleep-content">
+                        <!-- 睡觉选项将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="js/data/config/PlantConfig.js"></script>
@@ -253,6 +270,7 @@
     <script src="js/layers/business/core/FarmingModule.js"></script>
     <script src="js/layers/business/core/EconomyModule.js"></script>
     <script src="js/layers/business/core/LivestockModule.js"></script>
+    <script src="js/layers/business/core/SleepModule.js"></script>
     
     <script src="js/layers/control/EventBinder.js"></script>
     <script src="js/layers/control/InputHandler.js"></script>

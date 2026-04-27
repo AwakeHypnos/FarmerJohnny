@@ -19,7 +19,9 @@ class FarmingModule {
     }
 
     getUnlockPrice(unlockedCount) {
-        return Math.floor(this.config.baseUnlockPrice * Math.pow(unlockedCount, 1.5));
+        const basePrice = 100;
+        const priceIncrement = 50;
+        return basePrice + (unlockedCount - 1) * priceIncrement;
     }
 
     getNextUnlockPrice() {
@@ -389,6 +391,7 @@ class FarmingModule {
             }
         });
         this.eventBus.emit('farming:dailyReset');
+        this.eventBus.emit('farming:fieldsUpdated', this.fields);
     }
 
     handleSeasonChange(newSeason) {
