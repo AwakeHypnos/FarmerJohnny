@@ -241,6 +241,59 @@ class EconomyModule {
         return { success: true };
     }
 
+    buyCrop(cropType) {
+        const PlantConfig = window.PlantConfig || {};
+        const plantData = PlantConfig.getPlant ? 
+            PlantConfig.getPlant(cropType) : PlantConfig[cropType];
+
+        if (!plantData) {
+            return { success: false, reason: '作物不存在' };
+        }
+
+        const price = plantData.buyPrice || Math.floor(plantData.sellPrice * 1.5);
+
+        if (!this.gameState.hasEnoughMoney(price)) {
+            this.eventBus.emit('economy:notEnoughMoney');
+            return { success: false, reason: '资金不足' };
+        }
+
+        this.gameState.subtractMoney(price);
+        const result = this.gameState.addCrop(cropType);
+
+        if (!result.success) {
+            this.gameState.addMoney(price);
+            return { success: false, reason: result.reason };
+        }
+
+        this.eventBus.emit('economy:cropBought', {
+            cropType,
+            cropName: plantData.name,
+            price
+        });
+        this.eventBus.emit('economy:moneyChanged', this.getMoney());
+
+        return { success: true };
+    }
+
+    getAllAvailableCropsForSale() {
+        const PlantConfig = window.PlantConfig || {};
+        const crops = [];
+
+        const allPlants = PlantConfig.getAllPlants ? PlantConfig.getAllPlants() : PlantConfig;
+        
+        for (const [plantType, plantData] of Object.entries(allPlants)) {
+            if (typeof plantData === 'object' && plantData.sellPrice && !plantData.isTaboo) {
+                crops.push({ 
+                    id: plantType, 
+                    ...plantData,
+                    buyPrice: plantData.buyPrice || Math.floor(plantData.sellPrice * 1.5)
+                });
+            }
+        }
+
+        return crops;
+    }
+
     sellCrop(cropType, fromWarehouse = true) {
         const PlantConfig = window.PlantConfig || {};
         const plantData = PlantConfig.getPlant ? 

@@ -8,6 +8,8 @@ class LivestockModule {
 
         this.wildAnimals = [];
         this.maxWildAnimals = 3;
+        this.activeBaits = [];
+        this.maxBaits = 3;
 
         this.setupListeners();
     }
@@ -15,10 +17,94 @@ class LivestockModule {
     init() {
         this.wildAnimals = [];
         this.maxWildAnimals = 3;
+        this.activeBaits = [];
+        this.maxBaits = 3;
+    }
+
+    getActiveBaits() {
+        return [...this.activeBaits];
+    }
+
+    canPlaceBait() {
+        return this.activeBaits.length < this.maxBaits;
+    }
+
+    placeBait(cropType) {
+        const PlantConfig = window.PlantConfig || {};
+        const cropData = PlantConfig.getPlant ? PlantConfig.getPlant(cropType) : PlantConfig[cropType];
+
+        if (!cropData) {
+            return { success: false, reason: '作物数据无效' };
+        }
+
+        if (!cropData.animalBait || cropData.animalBait.length === 0) {
+            return { success: false, reason: '该作物不能用作诱饵' };
+        }
+
+        if (!this.gameState.hasCrop(cropType)) {
+            return { success: false, reason: '没有该作物' };
+        }
+
+        if (!this.canPlaceBait()) {
+            return { success: false, reason: '诱饵位已满' };
+        }
+
+        const hasCropInventory = this.gameState.getCropCount(cropType, false) > 0;
+        const removed = this.gameState.removeCrop(cropType, 1, !hasCropInventory);
+
+        if (!removed) {
+            return { success: false, reason: '作物数量不足' };
+        }
+
+        const bait = {
+            id: `bait_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            cropType: cropType,
+            cropName: cropData.name,
+            targetAnimals: [...cropData.animalBait],
+            baitChanceBonus: cropData.baitChanceBonus || 0.1,
+            captureBonus: cropData.captureBonus || 0,
+            placedTime: this.timeModule.getDay() * 24 + this.timeModule.getHour(),
+            duration: 24
+        };
+
+        this.activeBaits.push(bait);
+        this.eventBus.emit('livestock:baitPlaced', bait);
+
+        return { success: true, bait };
+    }
+
+    updateBaits() {
+        const currentTime = this.timeModule.getDay() * 24 + this.timeModule.getHour();
+        this.activeBaits = this.activeBaits.filter(bait => {
+            const age = currentTime - bait.placedTime;
+            if (age >= bait.duration) {
+                this.eventBus.emit('livestock:baitExpired', bait);
+                return false;
+            }
+            return true;
+        });
+    }
+
+    getBaitBonusForAnimal(wildAnimalType) {
+        let totalBonus = 0;
+        let captureBonus = 0;
+
+        this.activeBaits.forEach(bait => {
+            if (bait.targetAnimals.includes(wildAnimalType)) {
+                totalBonus += bait.baitChanceBonus;
+                captureBonus += bait.captureBonus;
+            }
+        });
+
+        return {
+            spawnBonus: Math.min(totalBonus, 0.5),
+            captureBonus: Math.min(captureBonus, 0.3)
+        };
     }
 
     setupListeners() {
         this.eventBus.on('time:hourChanged', () => {
+            this.updateBaits();
             this.trySpawnWildAnimal();
             this.updateAnimalTimers(60);
         });
@@ -29,11 +115,15 @@ class LivestockModule {
         });
 
         this.eventBus.on('ui:captureWildAnimal', (data) => {
-            this.captureAnimal(data.wildAnimalId, data.toolType);
+            this.captureAnimal(data.wildAnimalId, data.toolType, data.baitCropType);
         });
 
         this.eventBus.on('ui:feedAnimal', (data) => {
-            this.feedAnimal(data.animalId);
+            this.feedAnimal(data.animalId, data.cropType);
+        });
+
+        this.eventBus.on('ui:placeBait', (data) => {
+            this.placeBait(data.cropType);
         });
 
         this.eventBus.on('ui:sellAnimal', (data) => {
@@ -84,14 +174,14 @@ class LivestockModule {
         const AnimalConfig = window.AnimalConfig || {};
         const pollution = this.gameState.getPollution();
         
-        const spawnChance = 0.1 + (pollution / 200) * 0.1;
+        const baseSpawnChance = 0.1 + (pollution / 200) * 0.1;
+        const baitChanceBonus = this._getTotalBaitSpawnBonus();
+        const spawnChance = Math.min(0.5, baseSpawnChance + baitChanceBonus);
         
         if (Math.random() > spawnChance) return;
         if (this.wildAnimals.length >= this.maxWildAnimals) return;
 
-        const wildAnimal = AnimalConfig.getRandomWildAnimal ? 
-            AnimalConfig.getRandomWildAnimal(pollution) : 
-            this._getRandomWildAnimalFallback(pollution);
+        const wildAnimal = this._getWeightedRandomWildAnimal(pollution);
 
         if (!wildAnimal) return;
 
@@ -110,7 +200,21 @@ class LivestockModule {
         this.eventBus.emit('livestock:wildAnimalSpawned', newWildAnimal);
     }
 
-    _getRandomWildAnimalFallback(pollution) {
+    _getTotalBaitSpawnBonus() {
+        let totalBonus = 0;
+        const uniqueAnimals = new Set();
+        
+        this.activeBaits.forEach(bait => {
+            bait.targetAnimals.forEach(animalType => {
+                uniqueAnimals.add(animalType);
+            });
+            totalBonus += bait.baitChanceBonus * 0.5;
+        });
+        
+        return Math.min(totalBonus, 0.2);
+    }
+
+    _getWeightedRandomWildAnimal(pollution) {
         const AnimalConfig = window.AnimalConfig || {};
         const wildAnimals = AnimalConfig._wildAnimals || {};
         const animals = Object.values(wildAnimals);
@@ -121,12 +225,36 @@ class LivestockModule {
             if (pollution < 3 && a.rarity === 'rare') return false;
             return true;
         });
-        
+
+        const weightedAnimals = [];
+        filtered.forEach(animal => {
+            let weight = 1;
+            
+            this.activeBaits.forEach(bait => {
+                if (bait.targetAnimals.includes(animal.id)) {
+                    weight += bait.baitChanceBonus * 3;
+                }
+            });
+            
+            weightedAnimals.push({ animal, weight });
+        });
+
+        const totalWeight = weightedAnimals.reduce((sum, item) => sum + item.weight, 0);
+        let random = Math.random() * totalWeight;
+
+        for (const item of weightedAnimals) {
+            random -= item.weight;
+            if (random <= 0) {
+                return item.animal;
+            }
+        }
+
         return filtered[Math.floor(Math.random() * filtered.length)] || null;
     }
 
-    captureAnimal(wildAnimalId, toolType) {
+    captureAnimal(wildAnimalId, toolType, baitCropType = null) {
         const AnimalConfig = window.AnimalConfig || {};
+        const PlantConfig = window.PlantConfig || {};
         const wildAnimal = this.wildAnimals.find(a => a.id === wildAnimalId);
         
         if (!wildAnimal) {
@@ -134,11 +262,31 @@ class LivestockModule {
             return { success: false, reason: '该动物已不存在' };
         }
 
+        if (this.sanityModule) {
+            this.sanityModule.applyNightActionSanityLoss('捕捉');
+        }
+
         const tool = this.gameState.getAvailableCaptureTools().find(t => t.type === toolType);
         if (!tool || tool.count <= 0) {
             this.eventBus.emit('livestock:captureFailed', { reason: '没有足够的捕捉工具' });
             return { success: false, reason: '没有足够的捕捉工具' };
         }
+
+        let baitBonus = 0;
+        if (baitCropType) {
+            const cropData = PlantConfig.getPlant ? PlantConfig.getPlant(baitCropType) : PlantConfig[baitCropType];
+            if (cropData && cropData.captureBonus) {
+                if (this.gameState.hasCrop(baitCropType)) {
+                    const hasCropInventory = this.gameState.getCropCount(baitCropType, false) > 0;
+                    const removed = this.gameState.removeCrop(baitCropType, 1, !hasCropInventory);
+                    if (removed) {
+                        baitBonus = cropData.captureBonus;
+                    }
+                }
+            }
+        }
+
+        const activeBaitBonus = this.getBaitBonusForAnimal(wildAnimal.type).captureBonus;
 
         const toolConfig = AnimalConfig.getCaptureTool ? 
             AnimalConfig.getCaptureTool(toolType) : 
@@ -157,7 +305,7 @@ class LivestockModule {
 
         const baseChance = wildAnimal.captureChance;
         const bonusChance = toolConfig.captureBonus || 0;
-        const finalChance = Math.min(0.95, baseChance + bonusChance);
+        const finalChance = Math.min(0.95, baseChance + bonusChance + baitBonus + activeBaitBonus);
 
         if (Math.random() <= finalChance) {
             const result = this.gameState.addAnimal(wildAnimal.type, wildAnimal.domesticated);
@@ -280,16 +428,63 @@ class LivestockModule {
         }
     }
 
-    feedAnimal(animalId) {
+    feedAnimal(animalId, cropType = null) {
+        const PlantConfig = window.PlantConfig || {};
         const animal = this.gameState.getAnimal(animalId);
+
         if (!animal) {
             return { success: false, reason: '动物不存在' };
         }
 
-        animal.hungry = false;
-        
-        this.eventBus.emit('livestock:animalFed', { animalId });
-        return { success: true };
+        let fedSuccessfully = false;
+        let bonusEffect = false;
+
+        if (cropType) {
+            const canFeed = PlantConfig.hasAnimalFeed ? 
+                PlantConfig.hasAnimalFeed(cropType, animal.type) : 
+                this._checkAnimalFeedCompatibility(cropType, animal.type);
+
+            if (canFeed) {
+                if (this.gameState.hasCrop(cropType)) {
+                    const hasCropInventory = this.gameState.getCropCount(cropType, false) > 0;
+                    const removed = this.gameState.removeCrop(cropType, 1, !hasCropInventory);
+                    if (removed) {
+                        animal.hungry = false;
+                        animal.happiness = Math.min((animal.happiness || 50) + 15, 100);
+                        fedSuccessfully = true;
+                        bonusEffect = true;
+                    }
+                }
+            }
+        }
+
+        if (!fedSuccessfully) {
+            animal.hungry = false;
+            fedSuccessfully = true;
+        }
+
+        if (fedSuccessfully && this.sanityModule) {
+            this.sanityModule.applyNightActionSanityLoss('喂食');
+        }
+
+        this.eventBus.emit('livestock:animalFed', { 
+            animalId, 
+            cropType, 
+            bonusEffect 
+        });
+
+        return { success: true, bonusEffect };
+    }
+
+    _checkAnimalFeedCompatibility(cropType, animalType) {
+        const PlantConfig = window.PlantConfig || {};
+        const cropData = PlantConfig.getPlant ? PlantConfig.getPlant(cropType) : PlantConfig[cropType];
+
+        if (!cropData || !cropData.animalFeed) {
+            return false;
+        }
+
+        return cropData.animalFeed.includes(animalType);
     }
 
     sellAnimal(animalId) {

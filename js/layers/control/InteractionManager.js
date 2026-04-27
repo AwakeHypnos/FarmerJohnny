@@ -135,6 +135,10 @@ class InteractionManager {
             this.handleBuyFertilizer(fertilizerType);
         });
 
+        this.eventBus.on('ui:buyCrop', (cropType) => {
+            this.handleBuyCrop(cropType);
+        });
+
         this.eventBus.on('ui:sellCrop', (cropType) => {
             this.handleSellCrop(cropType);
         });
@@ -301,6 +305,9 @@ class InteractionManager {
     handleWaterField(fieldId) {
         const result = this.farmingModule.waterField(fieldId);
         if (result.success) {
+            if (this.sanityModule) {
+                this.sanityModule.applyNightActionSanityLoss('浇水');
+            }
             this.uiRenderer.showInfo('浇水成功！');
             this.uiRenderer.renderFields();
         } else {
@@ -366,6 +373,9 @@ class InteractionManager {
     handleApplyFertilizer(fieldId, fertilizerType) {
         const result = this.farmingModule.applyFertilizer(fieldId, fertilizerType);
         if (result.success) {
+            if (this.sanityModule) {
+                this.sanityModule.applyNightActionSanityLoss('施肥');
+            }
             const FertilizerConfig = window.FertilizerConfig || {};
             const fertilizer = FertilizerConfig.getFertilizer ? 
                 FertilizerConfig.getFertilizer(fertilizerType) : FertilizerConfig[fertilizerType];
@@ -379,6 +389,9 @@ class InteractionManager {
     handleHarvestField(fieldId) {
         const result = this.farmingModule.harvestField(fieldId);
         if (result.success) {
+            if (this.sanityModule) {
+                this.sanityModule.applyNightActionSanityLoss('收获');
+            }
             const PlantConfig = window.PlantConfig || {};
             const field = this.farmingModule.getField(fieldId);
             const plantData = PlantConfig.getPlant ? 
@@ -421,6 +434,20 @@ class InteractionManager {
             this.uiRenderer.showInfo(`成功购买了${fertilizer ? fertilizer.name : fertilizerType}！`);
             this.uiRenderer.updateMoneyDisplay();
             this.uiRenderer.renderMerchantContent('merchant-fertilizer');
+        } else {
+            this.uiRenderer.showInfo(result.reason);
+        }
+    }
+
+    handleBuyCrop(cropType) {
+        const result = this.economyModule.buyCrop(cropType);
+        if (result.success) {
+            const PlantConfig = window.PlantConfig || {};
+            const plantData = PlantConfig.getPlant ? 
+                PlantConfig.getPlant(cropType) : PlantConfig[cropType];
+            this.uiRenderer.showInfo(`成功购买了${plantData ? plantData.name : cropType}！`);
+            this.uiRenderer.updateMoneyDisplay();
+            this.uiRenderer.renderMerchantContent('merchant-crops');
         } else {
             this.uiRenderer.showInfo(result.reason);
         }

@@ -28,7 +28,6 @@ class SanityModule {
                 PlantConfig.getPlant(data.seedType) : PlantConfig[data.seedType];
             
             if (plantData && plantData.isTaboo) {
-                this.modifySanity(-3, '种植禁忌作物');
             } else {
                 this.modifySanity(1, '常规种植');
             }
@@ -40,7 +39,8 @@ class SanityModule {
                 PlantConfig.getPlant(data.plantType) : PlantConfig[data.plantType];
             
             if (plantData && plantData.isTaboo) {
-                this.modifySanity(-10, '收获禁忌作物');
+                const sanityLoss = plantData.sanityLossOnHarvest || 10;
+                this.modifySanity(-sanityLoss, '收获禁忌作物');
             } else {
                 this.modifySanity(2, '收获普通作物');
             }
@@ -146,9 +146,19 @@ class SanityModule {
         
         if (hour >= 6 && hour < 18) {
             this.modifySanity(0.2, '白天劳作恢复理智');
-        } else {
-            this.modifySanity(-1, '深夜劳作消耗理智');
         }
+    }
+
+    isNight() {
+        return this.timeModule ? this.timeModule.isNight() : false;
+    }
+
+    applyNightActionSanityLoss(actionName) {
+        if (this.isNight()) {
+            this.modifySanity(-1, `深夜${actionName}消耗理智`);
+            return true;
+        }
+        return false;
     }
 
     canPerformAction(action) {

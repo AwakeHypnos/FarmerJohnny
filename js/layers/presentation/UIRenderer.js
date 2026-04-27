@@ -42,6 +42,7 @@ class UIRenderer {
         this.fieldsContainer = document.getElementById('fields-container');
         this.barnContainer = document.getElementById('barn-container');
         this.barnInfo = document.getElementById('barn-info');
+        this.baitArea = document.getElementById('bait-area');
         
         this.navLeft = document.getElementById('nav-left');
         this.navRight = document.getElementById('nav-right');
@@ -161,15 +162,30 @@ class UIRenderer {
 
         this.eventBus.on('livestock:wildAnimalSpawned', (data) => {
             this.showInfo(`一只${data.name}出现在田地附近！`, 'info');
+            this.renderWildAnimals();
+        });
+
+        this.eventBus.on('livestock:baitPlaced', (data) => {
+            this.showInfo(`放置了${data.cropName}作为诱饵！`, 'info');
+            this.renderBaits();
+        });
+
+        this.eventBus.on('livestock:baitExpired', (data) => {
+            this.showInfo(`诱饵${data.cropName}已失效。`, 'info');
+            this.renderBaits();
         });
 
         this.eventBus.on('livestock:captureSuccess', (data) => {
             this.showInfo(`成功捕获了${data.wildAnimal.name}！`, 'success');
             this.renderBarn();
+            this.renderWildAnimals();
         });
 
         this.eventBus.on('livestock:captureFailed', (data) => {
             this.showInfo(`捕获失败：${data.reason}`, 'warning');
+            if (data.reason === '该动物已不存在' || data.reason === '捕捉失败，动物逃跑了') {
+                this.renderWildAnimals();
+            }
         });
 
         this.eventBus.on('livestock:animalProduced', (data) => {
@@ -231,6 +247,8 @@ class UIRenderer {
         if (this.navRight) this.navRight.style.visibility = 'visible';
         
         this.renderFields();
+        this.renderWildAnimals();
+        this.renderBaits();
     }
 
     switchToBarn() {
@@ -309,6 +327,7 @@ class UIRenderer {
         
         const animals = this.livestockModule.getAnimals();
         const AnimalConfig = window.AnimalConfig || {};
+        const PlantConfig = window.PlantConfig || {};
         
         this.barnContainer.innerHTML = '';
         
@@ -331,18 +350,24 @@ class UIRenderer {
                 this.livestockModule.getTimeUntilProduct(index) : 'N/A';
             
             const isReady = timeUntilProduct === '已就绪';
+            const isHungry = animal.hungry;
             
             animalElement.innerHTML = `
-                <div class="animal-icon">${animal.type === 'chicken' ? '🐔' : animal.type === 'cow' ? '🐮' : animal.type === 'pig' ? '🐷' : animal.type === 'goat' ? '🐐' : '🦇'}</div>
+                <div class="animal-icon">${this.getAnimalEmoji(animal.type)}</div>
                 <div class="animal-name">${animal.name || animal.type}</div>
                 <div class="animal-status">
                     ${isReady ? '<span class="product-ready">产品就绪</span>' : 
                       `<span class="product-timer">下次产出: ${timeUntilProduct}</span>`}
+                    ${isHungry ? '<span class="hungry-indicator">饥饿</span>' : ''}
                 </div>
                 <div class="animal-actions">
                     ${isReady ? 
                         `<button class="collect-btn" data-collect-id="${animal.id}">收集</button>` : 
                         ''}
+                    ${isHungry ? 
+                        `<button class="feed-btn" data-feed-id="${animal.id}">喂食</button>` : 
+                        ''}
+                    <button class="sell-btn" data-sell-id="${animal.id}">出售</button>
                 </div>
             `;
             
@@ -356,7 +381,101 @@ class UIRenderer {
                 }
             }
             
+            if (isHungry) {
+                const feedBtn = animalElement.querySelector('.feed-btn');
+                if (feedBtn) {
+                    feedBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.showFeedSelection(animal.id, animal.type, animal.name || animal.type);
+                    });
+                }
+            }
+
+            const sellBtn = animalElement.querySelector('.sell-btn');
+            if (sellBtn) {
+                sellBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.eventBus.emit('ui:sellAnimal', { animalId: animal.id });
+                });
+            }
+            
             this.barnContainer.appendChild(animalElement);
+        });
+    }
+
+    showFeedSelection(animalId, animalType, animalName) {
+        const PlantConfig = window.PlantConfig || {};
+        const feedableCrops = PlantConfig.getFeedCropsByAnimal ? PlantConfig.getFeedCropsByAnimal(animalType) : [];
+
+        const availableFeedCrops = [];
+        feedableCrops.forEach(crop => {
+            const count = this.gameState.getCropCount(crop.id);
+            if (count > 0) {
+                availableFeedCrops.push({ ...crop, count });
+            }
+        });
+
+        const existingModal = document.getElementById('feed-selection-modal');
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'feed-selection-modal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>喂食 ${animalName}</h2>
+                    <button class="close-btn" id="close-feed-modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 1rem; color: var(--ash-gray);">选择喂食的作物（喜欢的食物会让动物更快乐）：</p>
+                    <div class="inventory-content" id="feed-selection-content"></div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const content = document.getElementById('feed-selection-content');
+        
+        const defaultOption = this.createItemCard(
+            'default',
+            '普通饲料',
+            '使用默认饲料喂食（无快乐加成）',
+            '∞',
+            'crop'
+        );
+        defaultOption.addEventListener('click', () => {
+            this.eventBus.emit('ui:feedAnimal', { animalId: animalId, cropType: null });
+            modal.remove();
+        });
+        content.appendChild(defaultOption);
+
+        if (availableFeedCrops.length > 0) {
+            availableFeedCrops.forEach(crop => {
+                const card = this.createItemCard(
+                    crop.id,
+                    crop.name,
+                    crop.description + ' (快乐+15)',
+                    crop.count,
+                    'crop'
+                );
+                card.addEventListener('click', () => {
+                    this.eventBus.emit('ui:feedAnimal', { animalId: animalId, cropType: crop.id });
+                    modal.remove();
+                });
+                content.appendChild(card);
+            });
+        }
+
+        document.getElementById('close-feed-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
         });
     }
 
@@ -602,6 +721,32 @@ class UIRenderer {
                 
                 this.merchantContent.appendChild(card);
             });
+        } else if (tabType === 'merchant-crops') {
+            const crops = this.economyModule.getAllAvailableCropsForSale ? 
+                this.economyModule.getAllAvailableCropsForSale() : [];
+            
+            if (crops.length === 0) {
+                this.merchantContent.innerHTML = '<div style="grid-column: 1/-1; text-align: center; opacity: 0.7;">暂无作物售卖</div>';
+                return;
+            }
+
+            crops.forEach(crop => {
+                const animalUseInfo = this._getAnimalUseInfo(crop);
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.innerHTML = `
+                    <div class="item-name">${crop.name}</div>
+                    <div class="item-info">${crop.description}</div>
+                    ${animalUseInfo ? `<div class="item-info" style="font-size: 0.85rem; color: var(--primary-green);">${animalUseInfo}</div>` : ''}
+                    <div class="item-price">${crop.buyPrice}金币</div>
+                `;
+                
+                card.addEventListener('click', () => {
+                    this.eventBus.emit('ui:buyCrop', crop.id);
+                });
+                
+                this.merchantContent.appendChild(card);
+            });
         } else if (tabType === 'merchant-fertilizer') {
             const fertilizers = this.economyModule.getAllFertilizers();
             
@@ -621,6 +766,25 @@ class UIRenderer {
                 this.merchantContent.appendChild(card);
             });
         }
+    }
+
+    _getAnimalUseInfo(crop) {
+        const infoParts = [];
+        
+        if (crop.animalFeed && crop.animalFeed.length > 0) {
+            infoParts.push(`可喂食`);
+        }
+        if (crop.animalBait && crop.animalBait.length > 0) {
+            infoParts.push(`可引诱`);
+        }
+        if (crop.captureBonus && crop.captureBonus > 0) {
+            infoParts.push(`捕捉+${(crop.captureBonus * 100).toFixed(0)}%`);
+        }
+        
+        if (infoParts.length > 0) {
+            return `动物用途: ${infoParts.join('、')}`;
+        }
+        return null;
     }
 
     renderMarketContent() {
@@ -726,6 +890,345 @@ class UIRenderer {
         if (selectedCard) {
             selectedCard.classList.add('selected');
         }
+    }
+
+    renderBaits() {
+        const PlantConfig = window.PlantConfig || {};
+        if (!this.baitArea || !this.livestockModule) return;
+
+        const activeBaits = this.livestockModule.getActiveBaits();
+        const canPlaceBait = this.livestockModule.canPlaceBait();
+
+        this.baitArea.innerHTML = '';
+
+        const baitHeader = document.createElement('div');
+        baitHeader.className = 'bait-header';
+        baitHeader.innerHTML = `
+            <span class="bait-title">诱饵区域 (${activeBaits.length}/3)</span>
+            ${canPlaceBait ? `<button class="place-bait-btn" id="place-bait-btn">放置诱饵</button>` : ''}
+        `;
+        this.baitArea.appendChild(baitHeader);
+
+        if (activeBaits.length > 0) {
+            const baitContainer = document.createElement('div');
+            baitContainer.className = 'bait-container';
+
+            activeBaits.forEach(bait => {
+                const baitCard = document.createElement('div');
+                baitCard.className = 'bait-card';
+
+                const currentTime = this.timeModule.getDay() * 24 + this.timeModule.getHour();
+                const remainingHours = Math.max(0, bait.duration - (currentTime - bait.placedTime));
+
+                baitCard.innerHTML = `
+                    <div class="bait-emoji">🥕</div>
+                    <div class="bait-info">
+                        <div class="bait-name">${bait.cropName}</div>
+                        <div class="bait-target">引诱: ${bait.targetAnimals.map(a => this.getAnimalEmoji(a)).join(' ')}</div>
+                        <div class="bait-duration">剩余: ${remainingHours}小时</div>
+                    </div>
+                `;
+
+                baitContainer.appendChild(baitCard);
+            });
+
+            this.baitArea.appendChild(baitContainer);
+        }
+
+        const placeBaitBtn = document.getElementById('place-bait-btn');
+        if (placeBaitBtn) {
+            placeBaitBtn.addEventListener('click', () => {
+                this.showBaitSelection();
+            });
+        }
+    }
+
+    showBaitSelection() {
+        const PlantConfig = window.PlantConfig || {};
+        const baitableCrops = PlantConfig.getBaitableCrops ? PlantConfig.getBaitableCrops() : [];
+
+        if (baitableCrops.length === 0) {
+            this.showInfo('没有可用作诱饵的作物。', 'warning');
+            return;
+        }
+
+        const availableBaitCrops = [];
+        baitableCrops.forEach(crop => {
+            const count = this.gameState.getCropCount(crop.id);
+            if (count > 0) {
+                availableBaitCrops.push({ ...crop, count });
+            }
+        });
+
+        if (availableBaitCrops.length === 0) {
+            this.showInfo('背包中没有可用作诱饵的作物。', 'warning');
+            return;
+        }
+
+        const existingModal = document.getElementById('bait-selection-modal');
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'bait-selection-modal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>选择诱饵作物</h2>
+                    <button class="close-btn" id="close-bait-modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 1rem; color: var(--ash-gray);">选择用作诱饵的作物：</p>
+                    <div class="inventory-content" id="bait-selection-content"></div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const content = document.getElementById('bait-selection-content');
+        availableBaitCrops.forEach(crop => {
+            const card = this.createItemCard(
+                crop.id,
+                crop.name,
+                crop.description + ' (引诱: ' + (crop.animalBait ? crop.animalBait.map(a => this.getAnimalEmoji(a)).join(' ') : '') + ')',
+                crop.count,
+                'crop'
+            );
+            card.addEventListener('click', () => {
+                this.eventBus.emit('ui:placeBait', { cropType: crop.id });
+                modal.remove();
+            });
+            content.appendChild(card);
+        });
+
+        document.getElementById('close-bait-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    renderWildAnimals() {
+        const wildAnimalsArea = document.getElementById('wild-animals-area');
+        if (!wildAnimalsArea || !this.livestockModule) return;
+
+        const wildAnimals = this.livestockModule.getWildAnimals();
+        
+        if (wildAnimals.length === 0) {
+            wildAnimalsArea.innerHTML = '';
+            wildAnimalsArea.style.display = 'none';
+            return;
+        }
+
+        wildAnimalsArea.style.display = 'flex';
+        wildAnimalsArea.innerHTML = '';
+
+        const availableTools = this.gameState.getAvailableCaptureTools();
+
+        wildAnimals.forEach(animal => {
+            const animalCard = document.createElement('div');
+            animalCard.className = 'wild-animal-card';
+            animalCard.dataset.wildAnimalId = animal.id;
+
+            const rarityClass = `rarity-${animal.rarity}`;
+            animalCard.classList.add(rarityClass);
+
+            animalCard.innerHTML = `
+                <div class="wild-animal-icon">${this.getAnimalEmoji(animal.type)}</div>
+                <div class="wild-animal-name">${animal.name}</div>
+                <div class="wild-animal-desc">${animal.description}</div>
+                <div class="wild-animal-capture">
+                    ${availableTools.length > 0 ? 
+                        `<button class="capture-btn" data-wild-id="${animal.id}">捕捉</button>` : 
+                        `<span class="no-tools">需要捕捉工具</span>`}
+                </div>
+            `;
+
+            if (availableTools.length > 0) {
+                const captureBtn = animalCard.querySelector('.capture-btn');
+                captureBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showCaptureToolSelection(animal.id, animal.name);
+                });
+            }
+
+            wildAnimalsArea.appendChild(animalCard);
+        });
+    }
+
+    getAnimalEmoji(animalType) {
+        const emojiMap = {
+            'gray_rabbit': '🐰',
+            'dark_fox': '🦊',
+            'pale_chicken': '🐔',
+            'shadow_goat': '🐐',
+            'pale_deer': '🦌',
+            'twisted_owl': '🦉',
+            'slimy_toad': '🐸',
+            'domestic_rabbit': '🐰',
+            'domestic_fox': '🦊',
+            'domestic_chicken': '🐔',
+            'domestic_goat': '🐐',
+            'domestic_deer': '🦌',
+            'domestic_owl': '🦉',
+            'domestic_toad': '🐸'
+        };
+        return emojiMap[animalType] || '🦇';
+    }
+
+    showCaptureToolSelection(wildAnimalId, animalName) {
+        const PlantConfig = window.PlantConfig || {};
+        const availableTools = this.gameState.getAvailableCaptureTools();
+        
+        if (availableTools.length === 0) {
+            this.showInfo('没有可用的捕捉工具，请先在商店购买。', 'warning');
+            return;
+        }
+
+        const wildAnimal = this.livestockModule.getWildAnimals().find(a => a.id === wildAnimalId);
+
+        const captureBonusCrops = [];
+        const baitableCrops = PlantConfig.getBaitableCrops ? PlantConfig.getBaitableCrops() : [];
+        baitableCrops.forEach(crop => {
+            if (crop.captureBonus && crop.captureBonus > 0) {
+                const count = this.gameState.getCropCount(crop.id);
+                if (count > 0) {
+                    captureBonusCrops.push({ ...crop, count });
+                }
+            }
+        });
+
+        const existingModal = document.getElementById('capture-tool-selection-modal');
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'capture-tool-selection-modal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>捕捉 ${animalName}</h2>
+                    <button class="close-btn" id="close-capture-modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 0.5rem; color: var(--ash-gray);">选择捕捉工具：</p>
+                    <div class="inventory-content" id="capture-tool-selection-content"></div>
+                    ${captureBonusCrops.length > 0 ? `
+                        <p style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--ash-gray);">可选：使用作物增加捕捉成功率</p>
+                        <div class="inventory-content" id="capture-bait-selection-content"></div>
+                    ` : ''}
+                </div>
+                <div class="modal-footer" style="padding: 1rem; border-top: 1px solid var(--border-color);">
+                    <span id="capture-selection-hint" style="color: var(--ash-gray); font-size: 0.9rem;">
+                        已选择工具: <span id="selected-tool-display">无</span>
+                        ${captureBonusCrops.length > 0 ? ` | 诱饵: <span id="selected-bait-display">无</span>` : ''}
+                    </span>
+                    <button class="confirm-btn" id="confirm-capture-btn" style="display: none;">确认捕捉</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        let selectedToolType = null;
+        let selectedBaitType = null;
+
+        const updateSelection = () => {
+            const toolDisplay = document.getElementById('selected-tool-display');
+            const confirmBtn = document.getElementById('confirm-capture-btn');
+            
+            if (toolDisplay && selectedToolType) {
+                const toolDisplay.textContent = selectedToolType;
+            }
+            
+            if (confirmBtn) {
+                confirmBtn.style.display = selectedToolType ? 'inline-block' : 'none';
+            }
+        };
+
+        const content = document.getElementById('capture-tool-selection-content');
+        availableTools.forEach(tool => {
+            const card = this.createItemCard(
+                tool.type,
+                tool.name,
+                tool.description,
+                tool.count,
+                'tool'
+            );
+            card.addEventListener('click', () => {
+                document.querySelectorAll('#capture-tool-selection-content .item-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedToolType = tool.type;
+                updateSelection();
+            });
+            content.appendChild(card);
+        });
+
+        const baitContent = document.getElementById('capture-bait-selection-content');
+        if (baitContent && captureBonusCrops.length > 0) {
+            const noneOption = this.createItemCard(
+                'none',
+                '不使用诱饵',
+                '不使用任何作物作为诱饵',
+                '',
+                'crop'
+            );
+            noneOption.addEventListener('click', () => {
+                document.querySelectorAll('#capture-bait-selection-content .item-card').forEach(c => c.classList.remove('selected'));
+                noneOption.classList.add('selected');
+                selectedBaitType = null;
+                const baitDisplay = document.getElementById('selected-bait-display');
+                if (baitDisplay) baitDisplay.textContent = '无';
+            });
+            baitContent.appendChild(noneOption);
+
+            captureBonusCrops.forEach(crop => {
+                const card = this.createItemCard(
+                    crop.id,
+                    crop.name,
+                    `捕捉成功率+${(crop.captureBonus * 100).toFixed(0)}%`,
+                    crop.count,
+                    'crop'
+                );
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('#capture-bait-selection-content .item-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedBaitType = crop.id;
+                    const baitDisplay = document.getElementById('selected-bait-display');
+                    if (baitDisplay) baitDisplay.textContent = crop.name;
+                });
+                baitContent.appendChild(card);
+            });
+        }
+
+        const confirmBtn = document.getElementById('confirm-capture-btn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                if (selectedToolType) {
+                    this.eventBus.emit('ui:captureWildAnimal', {
+                        wildAnimalId: wildAnimalId,
+                        toolType: selectedToolType,
+                        baitCropType: selectedBaitType
+                    });
+                    modal.remove();
+                }
+            });
+        }
+
+        document.getElementById('close-capture-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
     }
 
     updateLoadButtonState(hasSave) {
