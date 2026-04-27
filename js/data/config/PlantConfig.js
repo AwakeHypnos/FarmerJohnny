@@ -8,7 +8,9 @@ const PlantConfig = {
             seasons: ['spring', 'summer'],
             sellPrice: 50,
             buyPrice: 20,
-            description: '神秘的幼苗，据说与古老者有关'
+            description: '神秘的幼苗，据说与古老者有关',
+            animalBait: ['dark_fox', 'twisted_owl'],
+            baitChanceBonus: 0.15
         },
         deep_onion: {
             id: 'deep_onion',
@@ -18,7 +20,8 @@ const PlantConfig = {
             seasons: ['spring', 'autumn'],
             sellPrice: 40,
             buyPrice: 15,
-            description: '来自深渊的洋葱，味道奇特'
+            description: '来自深渊的洋葱，味道奇特',
+            animalFeed: ['domestic_rabbit', 'domestic_goat']
         },
         nightshade_berry: {
             id: 'nightshade_berry',
@@ -28,7 +31,10 @@ const PlantConfig = {
             seasons: ['summer', 'autumn'],
             sellPrice: 70,
             buyPrice: 30,
-            description: '只在夜间生长的神秘浆果'
+            description: '只在夜间生长的神秘浆果',
+            animalBait: ['gray_rabbit', 'dark_fox'],
+            baitChanceBonus: 0.2,
+            captureBonus: 0.1
         },
         frost_mushroom: {
             id: 'frost_mushroom',
@@ -38,7 +44,10 @@ const PlantConfig = {
             seasons: ['autumn', 'winter'],
             sellPrice: 80,
             buyPrice: 35,
-            description: '在寒冷中生长的奇异蘑菇'
+            description: '在寒冷中生长的奇异蘑菇',
+            animalFeed: ['domestic_toad'],
+            animalBait: ['pale_deer'],
+            baitChanceBonus: 0.15
         },
         void_wheat: {
             id: 'void_wheat',
@@ -48,7 +57,8 @@ const PlantConfig = {
             seasons: ['spring', 'summer', 'autumn'],
             sellPrice: 60,
             buyPrice: 25,
-            description: '来自虚空的小麦，颗粒饱满'
+            description: '来自虚空的小麦，颗粒饱满',
+            animalFeed: ['domestic_chicken', 'domestic_goat', 'domestic_rabbit']
         },
         dark_pumpkin: {
             id: 'dark_pumpkin',
@@ -58,7 +68,10 @@ const PlantConfig = {
             seasons: ['autumn'],
             sellPrice: 100,
             buyPrice: 40,
-            description: '万圣节特供，散发着神秘气息'
+            description: '万圣节特供，散发着神秘气息',
+            animalFeed: ['domestic_chicken', 'domestic_goat', 'domestic_fox'],
+            animalBait: ['pale_deer', 'shadow_goat'],
+            baitChanceBonus: 0.2
         },
         starflower_herb: {
             id: 'starflower_herb',
@@ -68,7 +81,10 @@ const PlantConfig = {
             seasons: ['spring'],
             sellPrice: 55,
             buyPrice: 22,
-            description: '在星光下绽放的神秘草药'
+            description: '在星光下绽放的神秘草药',
+            animalBait: ['pale_deer', 'twisted_owl'],
+            baitChanceBonus: 0.25,
+            captureBonus: 0.15
         },
         bloodroot_tuber: {
             id: 'bloodroot_tuber',
@@ -78,7 +94,8 @@ const PlantConfig = {
             seasons: ['spring', 'summer'],
             sellPrice: 65,
             buyPrice: 28,
-            description: '汁液呈暗红色的块茎植物'
+            description: '汁液呈暗红色的块茎植物',
+            animalFeed: ['domestic_fox', 'domestic_deer']
         },
         moonmoss_spore: {
             id: 'moonmoss_spore',
@@ -88,7 +105,11 @@ const PlantConfig = {
             seasons: ['summer', 'autumn'],
             sellPrice: 75,
             buyPrice: 32,
-            description: '在月光下生长的神秘苔藓'
+            description: '在月光下生长的神秘苔藓',
+            animalFeed: ['domestic_toad'],
+            animalBait: ['slimy_toad'],
+            baitChanceBonus: 0.2,
+            captureBonus: 0.1
         },
         shadow_thistle: {
             id: 'shadow_thistle',
@@ -98,7 +119,9 @@ const PlantConfig = {
             seasons: ['autumn', 'winter'],
             sellPrice: 90,
             buyPrice: 38,
-            description: '在阴影中生长的带刺植物'
+            description: '在阴影中生长的带刺植物',
+            animalBait: ['shadow_goat', 'dark_fox'],
+            baitChanceBonus: 0.15
         },
         ghost_lichen: {
             id: 'ghost_lichen',
@@ -108,7 +131,10 @@ const PlantConfig = {
             seasons: ['winter', 'spring'],
             sellPrice: 85,
             buyPrice: 36,
-            description: '散发着微弱荧光的神秘地衣'
+            description: '散发着微弱荧光的神秘地衣',
+            animalFeed: ['domestic_owl', 'domestic_deer'],
+            animalBait: ['twisted_owl', 'pale_deer'],
+            baitChanceBonus: 0.2
         },
         elder_vine: {
             id: 'elder_vine',
@@ -118,7 +144,9 @@ const PlantConfig = {
             seasons: ['spring', 'summer', 'autumn', 'winter'],
             sellPrice: 70,
             buyPrice: 30,
-            description: '四季皆可生长的神秘藤蔓'
+            description: '四季皆可生长的神秘藤蔓',
+            animalBait: ['gray_rabbit', 'pale_chicken', 'slimy_toad'],
+            baitChanceBonus: 0.1
         },
         shoggoth_sprout: {
             id: 'shoggoth_sprout',
@@ -285,6 +313,66 @@ const PlantConfig = {
     getRequiredSanityLevel(plantId) {
         const plant = this.getPlant(plantId);
         return plant ? plant.requiredSanityLevel : null;
+    },
+
+    getFeedCropsByAnimal(animalType) {
+        const crops = [];
+        for (const [id, plant] of Object.entries(this._data)) {
+            if (plant.animalFeed && plant.animalFeed.includes(animalType)) {
+                crops.push({ id, ...plant });
+            }
+        }
+        return crops;
+    },
+
+    getBaitCropsByAnimal(wildAnimalType) {
+        const crops = [];
+        for (const [id, plant] of Object.entries(this._data)) {
+            if (plant.animalBait && plant.animalBait.includes(wildAnimalType)) {
+                crops.push({ id, ...plant });
+            }
+        }
+        return crops;
+    },
+
+    hasAnimalFeed(plantId, animalType) {
+        const plant = this.getPlant(plantId);
+        return plant && plant.animalFeed && plant.animalFeed.includes(animalType);
+    },
+
+    hasAnimalBait(plantId, wildAnimalType) {
+        const plant = this.getPlant(plantId);
+        return plant && plant.animalBait && plant.animalBait.includes(wildAnimalType);
+    },
+
+    getCaptureBonus(plantId) {
+        const plant = this.getPlant(plantId);
+        return plant && plant.captureBonus ? plant.captureBonus : 0;
+    },
+
+    getBaitChanceBonus(plantId) {
+        const plant = this.getPlant(plantId);
+        return plant && plant.baitChanceBonus ? plant.baitChanceBonus : 0;
+    },
+
+    getFeedableCrops() {
+        const crops = [];
+        for (const [id, plant] of Object.entries(this._data)) {
+            if (plant.animalFeed && plant.animalFeed.length > 0) {
+                crops.push({ id, ...plant });
+            }
+        }
+        return crops;
+    },
+
+    getBaitableCrops() {
+        const crops = [];
+        for (const [id, plant] of Object.entries(this._data)) {
+            if (plant.animalBait && plant.animalBait.length > 0) {
+                crops.push({ id, ...plant });
+            }
+        }
+        return crops;
     }
 };
 

@@ -67,7 +67,7 @@ class FarmingModule {
         this.eventBus.on('time:updated', (timeState) => {
         });
 
-        this.eventBus.on('time:newDay', () => {
+        this.eventBus.on('time:dawn', () => {
             this.resetDailyFieldStates();
         });
 
