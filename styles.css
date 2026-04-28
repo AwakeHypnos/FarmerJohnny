@@ -990,7 +990,7 @@ body {
     align-items: center;
     cursor: pointer;
     transition: all var(--transition-fast);
-    z-index: 50;
+    z-index: 200;
     font-family: serif;
 }
 

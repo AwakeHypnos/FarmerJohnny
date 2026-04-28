@@ -47,7 +47,9 @@ class SanityModule {
         });
 
         this.eventBus.on('farming:watered', () => {
-            this.modifySanity(0.5, '浇水');
+            if (!this.isNight()) {
+                this.modifySanity(0.5, '浇水');
+            }
         });
     }
 

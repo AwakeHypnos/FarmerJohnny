@@ -526,6 +526,13 @@ class UIRenderer {
                 </button>
             </div>
         `;
+
+        const upgradeBtn = document.getElementById('upgrade-barn');
+        if (upgradeBtn) {
+            upgradeBtn.addEventListener('click', () => {
+                this.eventBus.emit('input:upgradeBarn');
+            });
+        }
     }
 
     renderBarnAnimals() {
