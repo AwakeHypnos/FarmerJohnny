@@ -63,20 +63,23 @@
 }
 
 body.day-theme {
-    --bg-main: #2a3a35;
-    --bg-card: #3a4a45;
-    --bg-button: #4a5a55;
-    --text-main: #f8f8fc;
-    --text-secondary: #d8d8e0;
-    --border-color: #5a7a6a;
+    --bg-main: #3a5045;
+    --bg-card: #4a6055;
+    --bg-button: #5a7065;
+    --text-main: #ffffff;
+    --text-secondary: #f0f0f8;
+    --border-color: #6a9a7a;
     --accent-color: var(--algae-green-light);
     
-    --midnight-gray: #3a4a45;
-    --shadow-gray: #4a5a55;
+    --midnight-gray: #4a6055;
+    --shadow-gray: #5a7065;
     --old-cyan: var(--algae-green-bright);
     --mold-green: var(--algae-green-light);
     --gold-dull: var(--algae-gold-light);
     --blood-red: var(--algae-red-light);
+    --bone-white: #ffffff;
+    --ash-gray: #f0f0f8;
+    --ghost-glow: #ffffff;
 }
 
 body.night-theme {
@@ -2674,5 +2677,82 @@ body.night-theme .pond-field {
 
 body.night-theme .field-type-water {
     background: linear-gradient(135deg, #1a1a2a 0%, #2a2a4a 50%, #1a1a3a 100%);
+    border-color: #3a3a5a;
+}
+
+.pause-modal-content {
+    max-width: 400px;
+}
+
+.pause-menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pause-menu-btn {
+    background-color: var(--midnight-gray);
+    color: var(--bone-white);
+    border: 1px solid var(--shadow-gray);
+    padding: 0.75rem 1.5rem;
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+    letter-spacing: 0.03em;
+    border-radius: 4px;
+}
+
+.pause-menu-btn:hover {
+    background-color: var(--shadow-gray);
+    border-color: var(--old-cyan);
+    transform: translateX(-3px);
+}
+
+.pause-menu-btn#pause-save {
+    background-color: var(--algae-green);
+    border-color: var(--old-cyan);
+}
+
+.pause-menu-btn#pause-save:hover {
+    background-color: var(--old-cyan);
+}
+
+.pause-menu-btn#pause-main-menu {
+    background-color: var(--blood-red);
+    border-color: var(--flesh-red);
+}
+
+.pause-menu-btn#pause-main-menu:hover {
+    background-color: var(--flesh-red);
+}
+
+body.day-theme .pause-menu-btn {
+    background-color: #2a403a;
+    border-color: var(--algae-green);
+}
+
+body.day-theme .pause-menu-btn:hover {
+    background-color: #3a5045;
+    border-color: var(--ghost-glow);
+}
+
+body.day-theme .pause-menu-btn#pause-save {
+    background-color: var(--algae-green);
+    border-color: var(--old-cyan);
+}
+
+body.day-theme .pause-menu-btn#pause-save:hover {
+    background-color: var(--old-cyan);
+}
+
+body.night-theme .pause-menu-btn {
+    background-color: #121218;
+    border-color: #2a2a3a;
+}
+
+body.night-theme .pause-menu-btn:hover {
+    background-color: #1a1a2a;
     border-color: #3a3a5a;
 }

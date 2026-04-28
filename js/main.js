@@ -145,6 +145,24 @@ class FarmerJohnnyApp {
         this.eventBus.on('save:error', (data) => {
             this.logger.error('存档失败:', data.error);
         });
+
+        this.eventBus.on('game:paused', () => {
+            this.stopTimeLoop();
+            this.logger.debug('游戏已暂停');
+        });
+
+        this.eventBus.on('game:resumed', () => {
+            this.startTimeLoop();
+            this.logger.debug('游戏已继续');
+        });
+
+        this.eventBus.on('input:saveGame', () => {
+            this.saveGame();
+        });
+
+        this.eventBus.on('input:returnToMainMenu', () => {
+            this.returnToMainMenu();
+        });
     }
 
     startNewGame() {
@@ -267,6 +285,13 @@ class FarmerJohnnyApp {
         }
 
         return success;
+    }
+
+    returnToMainMenu() {
+        this.stopTimeLoop();
+        this.uiRenderer.hideModal('pause');
+        this.uiRenderer.switchToMainMenu();
+        this.logger.info('已返回主菜单');
     }
 
     destroy() {

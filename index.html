@@ -78,6 +78,7 @@
                         <button class="func-button" id="warehouse-btn">仓库</button>
                         <button class="func-button" id="exploration-btn">探索</button>
                         <button class="func-button" id="sleep-btn">睡觉</button>
+                        <button class="func-button" id="pause-btn">暂停</button>
                     </div>
                 </div>
 
@@ -335,6 +336,24 @@
                     <div class="artifact-actions">
                         <button class="action-btn" id="read-artifact-btn">阅读</button>
                         <button class="action-btn" id="cancel-artifact-read-btn">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 暂停菜单弹窗 -->
+        <div id="pause-modal" class="modal hidden">
+            <div class="modal-content pause-modal-content">
+                <div class="modal-header">
+                    <h2>游戏暂停</h2>
+                    <button class="close-btn" id="close-pause">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="pause-menu-buttons">
+                        <button class="pause-menu-btn" id="pause-resume">继续游戏</button>
+                        <button class="pause-menu-btn" id="pause-save">保存游戏</button>
+                        <button class="pause-menu-btn" id="pause-load">读取存档</button>
+                        <button class="pause-menu-btn" id="pause-main-menu">返回主菜单</button>
                     </div>
                 </div>
             </div>

@@ -31,6 +31,16 @@ class InteractionManager {
             this.uiRenderer.hideModal('developer');
         });
 
+        this.eventBus.on('input:showPause', () => {
+            this.uiRenderer.showModal('pause');
+            this.eventBus.emit('game:paused');
+        });
+
+        this.eventBus.on('input:hidePause', () => {
+            this.uiRenderer.hideModal('pause');
+            this.eventBus.emit('game:resumed');
+        });
+
         this.eventBus.on('input:showBackpack', () => {
             this.uiRenderer.showModal('backpack');
             this.uiRenderer.renderBackpackContent('seeds');
@@ -185,6 +195,14 @@ class InteractionManager {
 
         this.eventBus.on('input:switchToPond', () => {
             this.eventBus.emit('ui:switchToPond');
+        });
+
+        this.eventBus.on('input:navigateLeft', () => {
+            this.handleNavigateLeft();
+        });
+
+        this.eventBus.on('input:navigateRight', () => {
+            this.handleNavigateRight();
         });
 
         this.eventBus.on('farming:pondFieldClicked', (pondId) => {
@@ -442,12 +460,18 @@ class InteractionManager {
     handleApplyFertilizer(fieldId, fertilizerType) {
         const result = this.farmingModule.applyFertilizer(fieldId, fertilizerType);
         if (result.success) {
-            if (this.sanityModule) {
-                this.sanityModule.applyNightActionSanityLoss('施肥');
-            }
             const FertilizerConfig = window.FertilizerConfig || {};
             const fertilizer = FertilizerConfig.getFertilizer ? 
                 FertilizerConfig.getFertilizer(fertilizerType) : FertilizerConfig[fertilizerType];
+            
+            if (this.sanityModule) {
+                this.sanityModule.applyNightActionSanityLoss('施肥');
+                
+                if (fertilizer && fertilizer.isCorruption) {
+                    this.sanityModule.modifySanity(-5, `使用${fertilizer.name}消耗理智`);
+                }
+            }
+            
             this.uiRenderer.showInfo(`成功施用了${fertilizer ? fertilizer.name : fertilizerType}！`);
             this.uiRenderer.renderFields();
         } else {
@@ -772,12 +796,18 @@ class InteractionManager {
     handleApplyPondFertilizer(pondId, fertilizerType) {
         const result = this.farmingModule.applyPondFertilizer(pondId, fertilizerType);
         if (result.success) {
-            if (this.sanityModule) {
-                this.sanityModule.applyNightActionSanityLoss('施肥');
-            }
             const FertilizerConfig = window.FertilizerConfig || {};
             const fertilizer = FertilizerConfig.getFertilizer ? 
                 FertilizerConfig.getFertilizer(fertilizerType) : FertilizerConfig[fertilizerType];
+            
+            if (this.sanityModule) {
+                this.sanityModule.applyNightActionSanityLoss('施肥');
+                
+                if (fertilizer && fertilizer.isCorruption) {
+                    this.sanityModule.modifySanity(-5, `使用${fertilizer.name}消耗理智`);
+                }
+            }
+            
             this.uiRenderer.showInfo(`成功施用了${fertilizer ? fertilizer.name : fertilizerType}！`);
             if (this.farmingModule.isPondUnlocked()) {
                 this.eventBus.emit('ui:switchToPond');
@@ -803,6 +833,28 @@ class InteractionManager {
             }
         } else {
             this.uiRenderer.showInfo(result.reason);
+        }
+    }
+
+    handleNavigateLeft() {
+        const currentView = this.uiRenderer.currentView;
+        
+        if (currentView === 'barn') {
+            this.eventBus.emit('ui:switchToFields');
+        } else if (currentView === 'pond') {
+            this.eventBus.emit('ui:switchToBarn');
+        }
+    }
+
+    handleNavigateRight() {
+        const currentView = this.uiRenderer.currentView;
+        
+        if (currentView === 'fields') {
+            this.eventBus.emit('ui:switchToBarn');
+        } else if (currentView === 'barn') {
+            this.eventBus.emit('ui:switchToPond');
+        } else if (currentView === 'pond') {
+            this.eventBus.emit('ui:switchToFields');
         }
     }
 }

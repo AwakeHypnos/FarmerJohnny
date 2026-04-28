@@ -89,15 +89,39 @@ class InputHandler {
         this.eventBinder.bindClick('close-artifact-read', () => {
             this.eventBus.emit('input:hideArtifactRead');
         });
+
+        this.eventBinder.bindClick('pause-btn', () => {
+            this.eventBus.emit('input:showPause');
+        });
+
+        this.eventBinder.bindClick('close-pause', () => {
+            this.eventBus.emit('input:hidePause');
+        });
+
+        this.eventBinder.bindClick('pause-resume', () => {
+            this.eventBus.emit('input:hidePause');
+        });
+
+        this.eventBinder.bindClick('pause-save', () => {
+            this.eventBus.emit('input:saveGame');
+        });
+
+        this.eventBinder.bindClick('pause-load', () => {
+            this.eventBus.emit('input:loadGame');
+        });
+
+        this.eventBinder.bindClick('pause-main-menu', () => {
+            this.eventBus.emit('input:returnToMainMenu');
+        });
     }
 
     bindNavigationButtons() {
         this.eventBinder.bindClick('nav-left', () => {
-            this.eventBus.emit('input:switchToPond');
+            this.eventBus.emit('input:navigateLeft');
         });
 
         this.eventBinder.bindClick('nav-right', () => {
-            this.eventBus.emit('input:switchToBarn');
+            this.eventBus.emit('input:navigateRight');
         });
     }
 
