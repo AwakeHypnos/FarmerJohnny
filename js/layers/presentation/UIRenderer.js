@@ -42,9 +42,12 @@ class UIRenderer {
         
         this.fieldsView = document.getElementById('fields-view');
         this.barnView = document.getElementById('barn-view');
+        this.pondView = document.getElementById('pond-view');
         this.fieldsContainer = document.getElementById('fields-container');
         this.barnContainer = document.getElementById('barn-container');
         this.barnInfo = document.getElementById('barn-info');
+        this.pondContainer = document.getElementById('pond-container');
+        this.pondInfo = document.getElementById('pond-info');
         this.baitArea = document.getElementById('bait-area');
         
         this.navLeft = document.getElementById('nav-left');
@@ -344,6 +347,27 @@ class UIRenderer {
                     data.result.sanityChange > 0 ? 'success' : 'info');
             }
         });
+
+        this.eventBus.on('ui:switchToPond', () => {
+            this.switchToPond();
+        });
+
+        this.eventBus.on('farming:pondUpdated', () => {
+            if (this.currentView === 'pond') {
+                this.renderPond();
+            }
+        });
+
+        this.eventBus.on('farming:pondUnlocked', (data) => {
+            this.showInfo(`池塘区域已解锁！花费 ${data.cost} 金币`, 'success');
+        });
+
+        this.eventBus.on('farming:pondFieldUnlocked', (data) => {
+            this.showInfo(`池塘地块已解锁！花费 ${data.price} 金币`, 'success');
+            if (this.currentView === 'pond') {
+                this.renderPond();
+            }
+        });
     }
 
     switchToGameScreen() {
@@ -378,6 +402,10 @@ class UIRenderer {
         this.fieldsView.classList.add('active');
         this.barnView.classList.remove('active');
         this.barnView.classList.add('hidden');
+        if (this.pondView) {
+            this.pondView.classList.remove('active');
+            this.pondView.classList.add('hidden');
+        }
         
         if (this.navLeft) this.navLeft.style.visibility = 'hidden';
         if (this.navRight) this.navRight.style.visibility = 'visible';
@@ -393,11 +421,45 @@ class UIRenderer {
         this.barnView.classList.add('active');
         this.fieldsView.classList.remove('active');
         this.fieldsView.classList.add('hidden');
+        if (this.pondView) {
+            this.pondView.classList.remove('active');
+            this.pondView.classList.add('hidden');
+        }
         
         if (this.navLeft) this.navLeft.style.visibility = 'visible';
-        if (this.navRight) this.navRight.style.visibility = 'hidden';
+        if (this.navRight) this.navRight.style.visibility = 'visible';
         
         this.renderBarn();
+    }
+
+    switchToPond() {
+        const isPondUnlocked = this.farmingModule ? this.farmingModule.isPondUnlocked() : false;
+        
+        if (!isPondUnlocked) {
+            const check = this.farmingModule ? this.farmingModule.canUnlockPond() : null;
+            if (check && check.canUnlock) {
+                this.showInfo(`池塘区域需要解锁：花费 ${check.cost} 金币`, 'info');
+                this.eventBus.emit('farming:showPondUnlockOption', check);
+            } else {
+                this.showInfo(check ? check.reason : '池塘区域尚未解锁', 'warning');
+            }
+            return;
+        }
+
+        this.currentView = 'pond';
+        if (this.pondView) {
+            this.pondView.classList.remove('hidden');
+            this.pondView.classList.add('active');
+        }
+        this.fieldsView.classList.remove('active');
+        this.fieldsView.classList.add('hidden');
+        this.barnView.classList.remove('active');
+        this.barnView.classList.add('hidden');
+        
+        if (this.navLeft) this.navLeft.style.visibility = 'visible';
+        if (this.navRight) this.navRight.style.visibility = 'visible';
+        
+        this.renderPond();
     }
 
     updateSanityDisplay() {
@@ -700,12 +762,12 @@ class UIRenderer {
             
             if (!field.unlocked) {
                 fieldElement.classList.add('locked');
-                const nextUnlockPrice = this.farmingModule.getUnlockPrice ? 
-                    this.farmingModule.getUnlockPrice(unlockedCount) : 0;
+                const unlockPrice = this.farmingModule.getUnlockPrice ? 
+                    this.farmingModule.getUnlockPrice(index) : 0;
                 fieldElement.innerHTML = `
                     <div class="field-content">
                         <div class="locked-indicator">未解锁</div>
-                        <div class="unlock-price">解锁: ${nextUnlockPrice}金币</div>
+                        <div class="unlock-price">解锁: ${unlockPrice}金币</div>
                     </div>
                 `;
                 fieldElement.addEventListener('click', () => {
@@ -1890,6 +1952,127 @@ class UIRenderer {
     hideExplorationProgress() {
         if (!this.explorationProgressBar) return;
         this.explorationProgressBar.classList.add('hidden');
+    }
+
+    renderPond() {
+        this.renderPondInfo();
+        this.renderPondFields();
+    }
+
+    renderPondInfo() {
+        if (!this.pondInfo || !this.farmingModule) return;
+        
+        const pondState = this.farmingModule.getPondsState();
+        const unlockedPonds = pondState.ponds ? pondState.ponds.filter(p => p.unlocked).length : 0;
+        const totalPonds = pondState.totalPonds || 8;
+
+        let unlockInfo = '';
+        const currentDay = this.timeModule.getDay();
+        const unlockDay = pondState.unlockDay || 7;
+        const unlockCost = pondState.unlockCost || 1000;
+
+        if (!pondState.unlocked) {
+            if (currentDay >= unlockDay) {
+                unlockInfo = `<div class="pond-unlock-available">
+                    <span>已满足解锁条件</span>
+                    <button class="action-btn unlock-pond-btn" id="unlock-pond-btn">
+                        解锁池塘区域 (${unlockCost}金币)
+                    </button>
+                </div>`;
+            } else {
+                unlockInfo = `<div class="pond-unlock-locked">
+                    解锁条件：第 ${unlockDay} 天解锁 (当前：第 ${currentDay} 天)
+                </div>`;
+            }
+        }
+
+        this.pondInfo.innerHTML = `
+            <div class="pond-stats">
+                <span>已解锁地块: ${unlockedPonds}/${totalPonds}</span>
+            </div>
+            ${unlockInfo}
+        `;
+
+        const unlockPondBtn = document.getElementById('unlock-pond-btn');
+        if (unlockPondBtn) {
+            unlockPondBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.eventBus.emit('farming:unlockPond');
+            });
+        }
+    }
+
+    renderPondFields() {
+        if (!this.pondContainer || !this.farmingModule) return;
+
+        const PlantConfig = window.PlantConfig || {};
+        const ponds = this.farmingModule.getAllPonds();
+        
+        this.pondContainer.innerHTML = '';
+        
+        ponds.forEach((pond, index) => {
+            const pondElement = document.createElement('div');
+            pondElement.className = 'pond-field field-type-water';
+            pondElement.dataset.pondId = index;
+            
+            if (!pond.unlocked) {
+                pondElement.classList.add('locked');
+                const unlockPrice = this.farmingModule.getPondUnlockPrice ? 
+                    this.farmingModule.getPondUnlockPrice(index) : 500;
+                pondElement.innerHTML = `
+                    <div class="field-content">
+                        <div class="locked-indicator">未解锁</div>
+                        <div class="unlock-price">解锁: ${unlockPrice}金币</div>
+                    </div>
+                `;
+                pondElement.addEventListener('click', () => {
+                    this.eventBus.emit('farming:pondFieldClicked', index);
+                });
+            } else if (!pond.plant) {
+                pondElement.innerHTML = `
+                    <div class="field-content">
+                        <div style="font-size: 1.5rem;">💧</div>
+                        <div style="font-size: 0.8rem; opacity: 0.7;">水域</div>
+                    </div>
+                    <div class="field-status">
+                        <span class="water-indicator">池塘</span>
+                        <span class="fertilizer-indicator">${pond.fertilized ? '已施肥' : '未施肥'}</span>
+                    </div>
+                `;
+                pondElement.addEventListener('click', () => {
+                    this.eventBus.emit('farming:pondFieldClicked', index);
+                });
+            } else {
+                const plantData = PlantConfig.getPlant ? 
+                    PlantConfig.getPlant(pond.plant) : PlantConfig[pond.plant];
+                
+                if (!plantData) return;
+                
+                const stageText = plantData.stages[pond.stage];
+                const isReady = pond.stage >= plantData.stages.length - 1;
+                
+                const stageClass = `plant-stage-${Math.min(pond.stage, 3)}`;
+                pondElement.innerHTML = `
+                    <div class="field-content">
+                        <div class="plant-breathing ${stageClass}">${stageText}</div>
+                    </div>
+                    <div class="field-status">
+                        <span class="water-indicator">池塘</span>
+                        <span class="fertilizer-indicator">${pond.fertilized ? '已施肥' : '未施肥'}</span>
+                    </div>
+                `;
+                
+                if (isReady) {
+                    pondElement.classList.add('ready-to-harvest');
+                }
+                
+                pondElement.addEventListener('click', () => {
+                    this.eventBus.emit('farming:pondFieldClicked', index);
+                });
+            }
+            
+            this.pondContainer.appendChild(pondElement);
+        });
     }
 }
 

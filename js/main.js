@@ -210,6 +210,9 @@ class FarmerJohnnyApp {
             const gameMinutesToAdvance = updateInterval / realMsPerGameMinute;
             this.timeModule.advanceTime(gameMinutesToAdvance);
             this.farmingModule.updatePlantGrowth(gameMinutesToAdvance);
+            if (this.farmingModule && this.farmingModule.updatePondGrowth) {
+                this.farmingModule.updatePondGrowth(gameMinutesToAdvance);
+            }
             
             if (this.livestockModule && this.livestockModule.updateAnimalTimers) {
                 this.livestockModule.updateAnimalTimers(gameMinutesToAdvance);

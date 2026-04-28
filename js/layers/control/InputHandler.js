@@ -93,7 +93,7 @@ class InputHandler {
 
     bindNavigationButtons() {
         this.eventBinder.bindClick('nav-left', () => {
-            this.eventBus.emit('input:switchToFields');
+            this.eventBus.emit('input:switchToPond');
         });
 
         this.eventBinder.bindClick('nav-right', () => {

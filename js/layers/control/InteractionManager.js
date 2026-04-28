@@ -182,6 +182,30 @@ class InteractionManager {
         this.eventBus.on('ui:handleEventChoice', (data) => {
             this.handleEventChoice(data.eventId, data.choiceId);
         });
+
+        this.eventBus.on('input:switchToPond', () => {
+            this.eventBus.emit('ui:switchToPond');
+        });
+
+        this.eventBus.on('farming:pondFieldClicked', (pondId) => {
+            this.handlePondFieldClick(pondId);
+        });
+
+        this.eventBus.on('farming:showPondUnlockOption', (data) => {
+            this.showPondUnlockOption(data);
+        });
+
+        this.eventBus.on('farming:unlockPond', () => {
+            this.handleUnlockPond();
+        });
+
+        this.eventBus.on('farming:showFieldActions', (data) => {
+            if (data.field && data.field.isPond) {
+                this.showPondFieldActions(data.fieldId);
+            } else {
+                this.showFieldActions(data.fieldId);
+            }
+        });
     }
 
     handleSleep(hours) {
@@ -570,6 +594,215 @@ class InteractionManager {
         const result = this.explorationModule.handleEventChoice(eventId, choiceId);
         if (!result.success) {
             this.uiRenderer.showInfo(result.reason, 'warning');
+        }
+    }
+
+    handlePondFieldClick(pondId) {
+        this.farmingModule.handlePondClick(pondId);
+    }
+
+    handleUnlockPond() {
+        const result = this.farmingModule.unlockPond();
+        if (result.success) {
+            this.uiRenderer.showInfo(`池塘区域已解锁！花费 ${result.cost} 金币`, 'success');
+            this.eventBus.emit('ui:switchToPond');
+        } else {
+            this.uiRenderer.showInfo(result.reason, 'warning');
+        }
+    }
+
+    showPondUnlockOption(data) {
+        this.removeFieldActions();
+        
+        const pondElement = document.querySelector(`[data-pond-id="${data.pondId}"]`);
+        if (!pondElement) return;
+
+        const actionContainer = document.createElement('div');
+        actionContainer.className = 'action-buttons field-action-buttons unlock-options';
+        actionContainer.style.marginTop = '0.5rem';
+
+        const price = data.price;
+        const priceText = data.canUnlock 
+            ? `解锁此池塘地块需要 ${price} 金币` 
+            : data.reason;
+
+        const unlockBtn = this.createActionButton(
+            `解锁 (${price}金币)`, 
+            data.canUnlock, 
+            () => {
+                this.handleUnlockPondField(data.pondId);
+                actionContainer.remove();
+            }
+        );
+
+        actionContainer.appendChild(unlockBtn);
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'unlock-info';
+        infoDiv.style.fontSize = '0.8rem';
+        infoDiv.style.opacity = '0.7';
+        infoDiv.style.marginTop = '0.5rem';
+        infoDiv.style.textAlign = 'center';
+        infoDiv.textContent = priceText;
+        actionContainer.appendChild(infoDiv);
+
+        pondElement.appendChild(actionContainer);
+        this.currentFieldActions = actionContainer;
+
+        setTimeout(() => {
+            const removeHandler = (e) => {
+                if (!pondElement.contains(e.target)) {
+                    actionContainer.remove();
+                    document.removeEventListener('click', removeHandler);
+                }
+            };
+            document.addEventListener('click', removeHandler);
+        }, 100);
+    }
+
+    handleUnlockPondField(pondId) {
+        const result = this.farmingModule.unlockPondField(pondId);
+        if (!result.success) {
+            this.uiRenderer.showInfo(result.reason);
+        }
+    }
+
+    showPondFieldActions(pondId) {
+        this.removeFieldActions();
+        
+        const pondElement = document.querySelector(`[data-pond-id="${pondId}"]`);
+        if (!pondElement) return;
+
+        const pond = this.farmingModule.getPond(pondId);
+        const isReady = this.farmingModule.canHarvestPond(pondId);
+
+        const actionContainer = document.createElement('div');
+        actionContainer.className = 'action-buttons field-action-buttons';
+        actionContainer.style.marginTop = '0.5rem';
+
+        const availableFertilizers = this.economyModule.gameState.getAvailableFertilizers();
+        const fertilizerBtn = this.createActionButton(
+            '施肥', 
+            !pond.fertilized && availableFertilizers.length > 0, 
+            () => {
+                this.showPondFertilizerSelection(pondId);
+                actionContainer.remove();
+            }
+        );
+
+        actionContainer.appendChild(fertilizerBtn);
+
+        if (isReady.canHarvest) {
+            const harvestBtn = this.createActionButton('采摘', true, () => {
+                this.handleHarvestPond(pondId);
+                actionContainer.remove();
+            });
+            actionContainer.insertBefore(harvestBtn, actionContainer.firstChild);
+        }
+
+        pondElement.appendChild(actionContainer);
+        this.currentFieldActions = actionContainer;
+
+        setTimeout(() => {
+            const removeHandler = (e) => {
+                if (!pondElement.contains(e.target)) {
+                    actionContainer.remove();
+                    document.removeEventListener('click', removeHandler);
+                }
+            };
+            document.addEventListener('click', removeHandler);
+        }, 100);
+    }
+
+    showPondFertilizerSelection(pondId) {
+        const availableFertilizers = this.economyModule.gameState.getAvailableFertilizers();
+        
+        if (availableFertilizers.length === 0) {
+            this.uiRenderer.showInfo('没有可用的肥料。');
+            return;
+        }
+
+        const existingModal = document.getElementById('fertilizer-selection-modal');
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'fertilizer-selection-modal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>选择肥料</h2>
+                    <button class="close-btn" id="close-fertilizer-modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="inventory-content" id="fertilizer-selection-content"></div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const content = document.getElementById('fertilizer-selection-content');
+        availableFertilizers.forEach(fertilizer => {
+            const card = this.uiRenderer.createItemCard(
+                fertilizer.type,
+                fertilizer.name,
+                fertilizer.description,
+                fertilizer.count,
+                'fertilizer'
+            );
+            card.addEventListener('click', () => {
+                this.handleApplyPondFertilizer(pondId, fertilizer.type);
+                modal.remove();
+            });
+            content.appendChild(card);
+        });
+
+        document.getElementById('close-fertilizer-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    handleApplyPondFertilizer(pondId, fertilizerType) {
+        const result = this.farmingModule.applyPondFertilizer(pondId, fertilizerType);
+        if (result.success) {
+            if (this.sanityModule) {
+                this.sanityModule.applyNightActionSanityLoss('施肥');
+            }
+            const FertilizerConfig = window.FertilizerConfig || {};
+            const fertilizer = FertilizerConfig.getFertilizer ? 
+                FertilizerConfig.getFertilizer(fertilizerType) : FertilizerConfig[fertilizerType];
+            this.uiRenderer.showInfo(`成功施用了${fertilizer ? fertilizer.name : fertilizerType}！`);
+            if (this.farmingModule.isPondUnlocked()) {
+                this.eventBus.emit('ui:switchToPond');
+            }
+        } else {
+            this.uiRenderer.showInfo(result.reason);
+        }
+    }
+
+    handleHarvestPond(pondId) {
+        const result = this.farmingModule.harvestPond(pondId);
+        if (result.success) {
+            if (this.sanityModule) {
+                this.sanityModule.applyNightActionSanityLoss('收获');
+            }
+            const PlantConfig = window.PlantConfig || {};
+            const pond = this.farmingModule.getPond(pondId);
+            const plantData = PlantConfig.getPlant ? 
+                PlantConfig.getPlant(pond.plant) : PlantConfig[pond.plant];
+            this.uiRenderer.showInfo(`成功采摘了${plantData ? plantData.name : '作物'}！已放入背包。`);
+            if (this.farmingModule.isPondUnlocked()) {
+                this.eventBus.emit('ui:switchToPond');
+            }
+        } else {
+            this.uiRenderer.showInfo(result.reason);
         }
     }
 }
