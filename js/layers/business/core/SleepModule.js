@@ -36,16 +36,19 @@ class SleepModule {
     }
 
     getAvailableSleepHours() {
-        const hour = this.timeModule.getHour();
+        const timeState = this.timeModule.getTimeState();
+        const exactHour = timeState.hour;
+        const minute = timeState.minute;
+        const currentTime = exactHour + minute / 60;
         
-        if (hour >= 20) {
-            return 10;
-        } else if (hour >= 18) {
-            return 12 - (hour - 18);
-        } else if (hour >= 6 && hour < 18) {
+        if (currentTime >= 20) {
+            return 10 - (currentTime - 20);
+        } else if (currentTime >= 18) {
+            return 12 - (currentTime - 18);
+        } else if (currentTime >= 6 && currentTime < 18) {
             return 0;
         } else {
-            return 6 - hour;
+            return 6 - currentTime;
         }
     }
 

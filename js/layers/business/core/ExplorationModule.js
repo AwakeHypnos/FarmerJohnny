@@ -186,7 +186,7 @@ class ExplorationModule {
         }
 
         const sanityCost = this._calculateSanityCost(region);
-        this.sanityModule.subtractSanity(sanityCost);
+        this.sanityModule.modifySanity(-sanityCost, '开始探索');
 
         const nightBonus = this.state.passiveTalents.some(t => t.type === 'night_exploration_bonus');
 
@@ -676,7 +676,7 @@ class ExplorationModule {
         const ExplorationConfig = window.ExplorationConfig || {};
         const artifact = ExplorationConfig.getArtifact ? ExplorationConfig.getArtifact(artifactId) : null;
 
-        this.sanityModule.subtractSanity(artifact.readSanityLoss);
+        this.sanityModule.modifySanity(-artifact.readSanityLoss, '阅读文物');
         this.state.readArtifacts.push(artifactId);
 
         const results = {
@@ -778,7 +778,7 @@ class ExplorationModule {
 
             case 'bonus_rewards':
                 if (outcome.sanityCost) {
-                    this.sanityModule.subtractSanity(outcome.sanityCost);
+                    this.sanityModule.modifySanity(-outcome.sanityCost, '探索事件');
                     result.sanityChange = -outcome.sanityCost;
                 }
                 result.rewards = this._generateQuickRewards(outcome.rewardMultiplier || 2);
@@ -792,7 +792,7 @@ class ExplorationModule {
             case 'study_geometry':
             case 'decipher_code':
                 if (outcome.sanityCost) {
-                    this.sanityModule.subtractSanity(outcome.sanityCost);
+                    this.sanityModule.modifySanity(-outcome.sanityCost, '探索事件');
                     result.sanityChange = -outcome.sanityCost;
                 }
                 result.message = '你获得了一些有用的知识。';
@@ -807,7 +807,7 @@ class ExplorationModule {
                     result.message = '你的勇气得到了丰厚的回报！';
                 } else if (Math.random() < outcome.curseChance) {
                     result.message = '你被诅咒了！';
-                    this.sanityModule.subtractSanity(15);
+                    this.sanityModule.modifySanity(-15, '探索事件');
                     result.sanityChange = -15;
                 } else {
                     result.message = '什么也没发生。';
@@ -825,7 +825,7 @@ class ExplorationModule {
                 break;
 
             case 'resist':
-                this.sanityModule.addSanity(outcome.sanityGain || 5);
+                this.sanityModule.modifySanity(outcome.sanityGain || 5, '探索事件');
                 result.sanityChange = outcome.sanityGain || 5;
                 result.message = '你成功抵抗了诱惑，感到更加清醒。';
                 break;
@@ -856,12 +856,12 @@ class ExplorationModule {
             case 'divine_interaction':
                 const roll = Math.random();
                 if (roll < outcome.blessingChance) {
-                    this.sanityModule.addSanity(10);
+                    this.sanityModule.modifySanity(10, '探索事件');
                     result.sanityChange = 10;
                     result.message = '你获得了祝福！';
                     result.rewards = this._generateQuickRewards(2);
                 } else if (roll < outcome.blessingChance + outcome.curseChance) {
-                    this.sanityModule.subtractSanity(20);
+                    this.sanityModule.modifySanity(-20, '探索事件');
                     result.sanityChange = -20;
                     result.message = '你被诅咒了！';
                 } else {
@@ -872,7 +872,7 @@ class ExplorationModule {
             case 'hallucination':
             case 'glimpse_rift':
             case 'worship_hymn':
-                this.sanityModule.subtractSanity(10);
+                this.sanityModule.modifySanity(-10, '探索事件');
                 result.sanityChange = -10;
                 if (Math.random() < 0.4) {
                     result.rewards = this._generateQuickRewards(1);
@@ -892,7 +892,7 @@ class ExplorationModule {
                     result.rewards = this._generateQuickRewards(1.5);
                     result.message = '你的好奇心得到了回报！';
                 } else {
-                    this.sanityModule.subtractSanity(5);
+                    this.sanityModule.modifySanity(-5, '探索事件');
                     result.sanityChange = -5;
                     result.message = '有些不对劲...';
                 }
@@ -905,7 +905,7 @@ class ExplorationModule {
                     result.rewards = this._generateQuickRewards(2.5);
                     result.message = '你成功与神秘力量共鸣！';
                 } else {
-                    this.sanityModule.subtractSanity(15);
+                    this.sanityModule.modifySanity(-15, '探索事件');
                     result.sanityChange = -15;
                     result.message = '你的意识无法承受这种共鸣...';
                 }
@@ -920,7 +920,7 @@ class ExplorationModule {
                     result.rewards = this._generateQuickRewards(2);
                     result.message = '你发现了隐藏的秘密！';
                 } else {
-                    this.sanityModule.subtractSanity(8);
+                    this.sanityModule.modifySanity(-8, '探索事件');
                     result.sanityChange = -8;
                     result.message = '你看到了不该看的东西...';
                 }
@@ -936,7 +936,7 @@ class ExplorationModule {
                     result.rewards = this._generateQuickRewards(3);
                     result.message = '你的冒险精神得到了巨大回报！';
                 } else {
-                    this.sanityModule.subtractSanity(12);
+                    this.sanityModule.modifySanity(-12, '探索事件');
                     result.sanityChange = -12;
                     result.message = '这太危险了！';
                 }
@@ -951,7 +951,7 @@ class ExplorationModule {
                     result.rewards = this._generateQuickRewards(2);
                     result.message = '你找到了正确的道路！';
                 } else {
-                    this.sanityModule.subtractSanity(10);
+                    this.sanityModule.modifySanity(-10, '探索事件');
                     result.sanityChange = -10;
                     result.message = '你迷失了方向...';
                 }
@@ -974,7 +974,7 @@ class ExplorationModule {
                     result.rewards = this._generateQuickRewards(4);
                     result.message = '你理解了现实的本质！';
                 } else {
-                    this.sanityModule.subtractSanity(25);
+                    this.sanityModule.modifySanity(-25, '探索事件');
                     result.sanityChange = -25;
                     result.message = '你的心智几乎崩溃...';
                 }
@@ -982,18 +982,18 @@ class ExplorationModule {
 
             case 'resist_warp':
                 if (Math.random() < 0.6) {
-                    this.sanityModule.addSanity(5);
+                    this.sanityModule.modifySanity(5, '探索事件');
                     result.sanityChange = 5;
                     result.message = '你的意志力得到了锻炼！';
                 } else {
-                    this.sanityModule.subtractSanity(10);
+                    this.sanityModule.modifySanity(-10, '探索事件');
                     result.sanityChange = -10;
                     result.message = '抵抗消耗了你的精力...';
                 }
                 break;
 
             case 'panic':
-                this.sanityModule.subtractSanity(15);
+                this.sanityModule.modifySanity(-15, '探索事件');
                 result.sanityChange = -15;
                 result.message = '你的恐慌使情况变得更糟。';
                 result.interruptExploration = true;
