@@ -1,5 +1,5 @@
 class UIRenderer {
-    constructor(eventBus, timeModule, gameState, farmingModule, economyModule, sanityModule, pollutionModule, livestockModule, sleepModule, animationManager, effectManager) {
+    constructor(eventBus, timeModule, gameState, farmingModule, economyModule, sanityModule, pollutionModule, livestockModule, sleepModule, explorationModule, animationManager, effectManager) {
         this.eventBus = eventBus;
         this.timeModule = timeModule;
         this.gameState = gameState;
@@ -9,10 +9,12 @@ class UIRenderer {
         this.pollutionModule = pollutionModule;
         this.livestockModule = livestockModule;
         this.sleepModule = sleepModule;
+        this.explorationModule = explorationModule;
         this.animationManager = animationManager;
         this.effectManager = effectManager;
 
         this.currentView = 'fields';
+        this.currentExplorationTab = 'exploration-map';
 
         this.initDOMElements();
         this.setupListeners();
@@ -65,8 +67,29 @@ class UIRenderer {
             warehouse: document.getElementById('warehouse-modal'),
             developer: document.getElementById('developer-modal'),
             log: document.getElementById('log-modal'),
-            sleep: document.getElementById('sleep-modal')
+            sleep: document.getElementById('sleep-modal'),
+            exploration: document.getElementById('exploration-modal'),
+            mysteryEvent: document.getElementById('mystery-event-modal'),
+            artifactRead: document.getElementById('artifact-read-modal')
         };
+
+        this.explorationMap = document.getElementById('exploration-map');
+        this.regionsContainer = document.getElementById('regions-container');
+        this.explorationArtifacts = document.getElementById('exploration-artifacts');
+        this.explorationTalents = document.getElementById('exploration-talents');
+        this.explorationProgressBar = document.getElementById('exploration-progress');
+        this.explorationProgressFill = document.getElementById('exploration-progress-fill');
+        this.explorationProgressText = document.getElementById('exploration-progress-text');
+
+        this.eventIcon = document.getElementById('event-icon');
+        this.eventTitle = document.getElementById('event-title');
+        this.eventDescription = document.getElementById('event-description');
+        this.eventChoices = document.getElementById('event-choices');
+
+        this.artifactReadIcon = document.getElementById('artifact-read-icon');
+        this.artifactReadTitle = document.getElementById('artifact-read-title');
+        this.artifactReadDescription = document.getElementById('artifact-read-description');
+        this.artifactReadEffects = document.getElementById('artifact-read-effects');
     }
 
     setupListeners() {
@@ -242,6 +265,84 @@ class UIRenderer {
 
         this.eventBus.on('sleep:debuffRemoved', (data) => {
             this.showInfo('睡眠不足Debuff已消失', 'success');
+        });
+
+        this.eventBus.on('input:showExploration', () => {
+            this.showModal('exploration');
+            this.renderExplorationContent('exploration-map');
+            this.bindExplorationTabs();
+        });
+
+        this.eventBus.on('input:hideExploration', () => {
+            this.hideModal('exploration');
+        });
+
+        this.eventBus.on('input:hideArtifactRead', () => {
+            this.hideModal('artifactRead');
+        });
+
+        this.eventBus.on('exploration:regionUnlocked', (data) => {
+            this.showInfo(`新区域解锁：${data.regionName}！`, 'info');
+            if (this.modals.exploration && this.modals.exploration.classList.contains('active')) {
+                this.renderExplorationContent(this.currentExplorationTab);
+            }
+        });
+
+        this.eventBus.on('exploration:regionsUpdated', () => {
+            if (this.modals.exploration && this.modals.exploration.classList.contains('active')) {
+                this.renderExplorationContent(this.currentExplorationTab);
+            }
+        });
+
+        this.eventBus.on('exploration:started', (data) => {
+            this.showInfo(`开始探索${data.regionName}...`);
+            this.showExplorationProgress();
+        });
+
+        this.eventBus.on('exploration:progressUpdated', (data) => {
+            this.updateExplorationProgress(data.progress);
+        });
+
+        this.eventBus.on('exploration:completed', (data) => {
+            this.hideExplorationProgress();
+            const rewardTexts = [];
+            if (data.rewards.money > 0) rewardTexts.push(`${data.rewards.money}金币`);
+            if (data.rewards.seeds.length > 0) rewardTexts.push('种子');
+            if (data.rewards.items.length > 0) rewardTexts.push('物品');
+            if (data.rewards.artifacts.length > 0) rewardTexts.push('文物');
+            this.showInfo(`探索${data.regionName}完成！获得：${rewardTexts.join('、')}`, 'success');
+            this.renderExplorationContent(this.currentExplorationTab);
+        });
+
+        this.eventBus.on('exploration:mysteryEvent', (data) => {
+            this.showMysteryEvent(data);
+        });
+
+        this.eventBus.on('exploration:artifactFound', (data) => {
+            this.showInfo(`发现了${data.artifact.name}！`, 'success');
+        });
+
+        this.eventBus.on('exploration:artifactRead', (data) => {
+            this.hideModal('artifactRead');
+            let message = `阅读了${data.artifact.name}。`;
+            if (data.results.passiveTalent) {
+                message += ` 解锁天赋：${data.results.passiveTalent.name}！`;
+            }
+            this.showInfo(message, data.results.sanityLoss > 0 ? 'warning' : 'info');
+            this.renderExplorationContent(this.currentExplorationTab);
+        });
+
+        this.eventBus.on('exploration:error', (data) => {
+            this.showInfo(data.message, 'warning');
+        });
+
+        this.eventBus.on('exploration:eventResolved', (data) => {
+            this.hideModal('mysteryEvent');
+            if (data.result.message) {
+                this.showInfo(data.result.message, 
+                    data.result.sanityChange < 0 ? 'warning' : 
+                    data.result.sanityChange > 0 ? 'success' : 'info');
+            }
         });
     }
 
@@ -1417,6 +1518,378 @@ class UIRenderer {
                 loadBtn.style.cursor = 'pointer';
             }
         }
+    }
+
+    bindExplorationTabs() {
+        const tabs = document.querySelectorAll('.exploration-tabs .tab-button');
+        tabs.forEach(tab => {
+            const handler = (e) => {
+                e.stopPropagation();
+                document.querySelectorAll('.exploration-tabs .tab-button').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.currentExplorationTab = tab.dataset.tab;
+                this.renderExplorationContent(tab.dataset.tab);
+            };
+            tab.removeEventListener('click', handler);
+            tab.addEventListener('click', handler);
+        });
+    }
+
+    renderExplorationContent(tabType) {
+        if (!this.explorationModule) return;
+
+        this.explorationMap = document.getElementById('exploration-map');
+        this.explorationArtifacts = document.getElementById('exploration-artifacts');
+        this.explorationTalents = document.getElementById('exploration-talents');
+
+        if (this.explorationMap) this.explorationMap.classList.add('hidden');
+        if (this.explorationArtifacts) this.explorationArtifacts.classList.add('hidden');
+        if (this.explorationTalents) this.explorationTalents.classList.add('hidden');
+
+        if (tabType === 'exploration-map') {
+            if (this.explorationMap) this.explorationMap.classList.remove('hidden');
+            this.renderExplorationMap();
+        } else if (tabType === 'exploration-artifacts') {
+            if (this.explorationArtifacts) this.explorationArtifacts.classList.remove('hidden');
+            this.renderArtifacts();
+        } else if (tabType === 'exploration-talents') {
+            if (this.explorationTalents) this.explorationTalents.classList.remove('hidden');
+            this.renderTalents();
+        }
+    }
+
+    renderExplorationMap() {
+        if (!this.regionsContainer || !this.explorationModule) return;
+
+        const allRegions = this.explorationModule.getAllRegions();
+        const ExplorationConfig = window.ExplorationConfig || {};
+
+        this.regionsContainer.innerHTML = '';
+
+        const tiers = ['shallow', 'medium', 'deep'];
+        const tierNames = {
+            'shallow': '浅层区域',
+            'medium': '中层区域',
+            'deep': '深层区域'
+        };
+
+        tiers.forEach(tier => {
+            const tierRegions = allRegions.filter(r => r.tier === tier);
+            if (tierRegions.length === 0) return;
+
+            const tierSection = document.createElement('div');
+            tierSection.className = 'region-tier-section';
+            tierSection.innerHTML = `<div class="region-tier-title">${tierNames[tier]}</div>`;
+
+            const regionsGrid = document.createElement('div');
+            regionsGrid.className = 'regions-grid';
+
+            tierRegions.forEach(region => {
+                const regionCard = this.createRegionCard(region);
+                regionsGrid.appendChild(regionCard);
+            });
+
+            tierSection.appendChild(regionsGrid);
+            this.regionsContainer.appendChild(tierSection);
+        });
+    }
+
+    createRegionCard(region) {
+        const isExploring = this.explorationModule.getCurrentExploration() !== null;
+        const canExplore = this.explorationModule.canExplore(region.id);
+        const visitCount = region.visitCount || 0;
+
+        const card = document.createElement('div');
+        card.className = `region-card ${region.isUnlocked ? 'unlocked' : 'locked'} ${region.tier}`;
+        card.dataset.regionId = region.id;
+
+        let statusText = '';
+        if (!region.isUnlocked) {
+            statusText = '🔒 未解锁';
+        } else if (isExploring) {
+            statusText = '⏳ 探索中...';
+        } else if (!canExplore.canExplore) {
+            statusText = `⚠️ ${canExplore.reason}`;
+        } else {
+            statusText = `✨ 可探索 (${region.baseSanityCost}理智)`;
+        }
+
+        card.innerHTML = `
+            <div class="region-icon">${region.icon}</div>
+            <div class="region-name">${region.name}</div>
+            <div class="region-desc">${region.description}</div>
+            <div class="region-stats">
+                <span class="region-stat">时间: ${region.explorationTime}分钟</span>
+                <span class="region-stat">理智: ${region.baseSanityCost}</span>
+                <span class="region-stat">探索: ${visitCount}次</span>
+            </div>
+            <div class="region-status">${statusText}</div>
+            ${region.isUnlocked && canExplore.canExplore && !isExploring ? 
+                `<button class="action-btn explore-btn" data-explore-id="${region.id}">开始探索</button>` : ''}
+        `;
+
+        const exploreBtn = card.querySelector('.explore-btn');
+        if (exploreBtn) {
+            exploreBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.eventBus.emit('ui:startExploration', region.id);
+            });
+        }
+
+        return card;
+    }
+
+    renderArtifacts() {
+        if (!this.explorationArtifacts || !this.explorationModule) return;
+
+        const collectedArtifacts = this.explorationModule.getCollectedArtifacts();
+        const readArtifacts = this.explorationModule.getReadArtifacts();
+
+        if (collectedArtifacts.length === 0) {
+            this.explorationArtifacts.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--ash-gray);">尚未收集任何文物，去探索吧！</div>';
+            return;
+        }
+
+        this.explorationArtifacts.innerHTML = '';
+        const contentGrid = document.createElement('div');
+        contentGrid.className = 'inventory-content';
+
+        collectedArtifacts.forEach(artifact => {
+            const isRead = readArtifacts.includes(artifact.id);
+            const canRead = this.explorationModule.canReadArtifact(artifact.id);
+
+            const card = document.createElement('div');
+            card.className = `item-card artifact-card ${artifact.rarity} ${isRead ? 'read' : ''}`;
+            card.dataset.artifactId = artifact.id;
+
+            const rarityColors = {
+                'common': '#9e9e9e',
+                'uncommon': '#4caf50',
+                'rare': '#2196f3',
+                'epic': '#9c27b0',
+                'legendary': '#ff9800'
+            };
+            const rarityNames = {
+                'common': '普通',
+                'uncommon': '优秀',
+                'rare': '稀有',
+                'epic': '史诗',
+                'legendary': '传说'
+            };
+
+            card.style.borderColor = rarityColors[artifact.rarity] || '#9e9e9e';
+
+            let effectsText = '';
+            if (artifact.effects) {
+                if (artifact.effects.unlocks && artifact.effects.unlocks.length > 0) {
+                    effectsText += `解锁: ${artifact.effects.unlocks.length}项`;
+                }
+                if (artifact.effects.passive) {
+                    effectsText += `${effectsText ? ' | ' : ''}天赋: ${artifact.effects.passive.name}`;
+                }
+            }
+
+            card.innerHTML = `
+                <div class="item-name">
+                    <span class="artifact-icon">${artifact.icon}</span>
+                    ${artifact.name}
+                </div>
+                <div class="item-info" style="color: ${rarityColors[artifact.rarity]}; font-size: 0.8rem;">
+                    ${rarityNames[artifact.rarity] || '未知'}
+                </div>
+                <div class="item-info">${artifact.description}</div>
+                ${effectsText ? `<div class="item-info" style="font-size: 0.85rem; color: var(--primary-green);">${effectsText}</div>` : ''}
+                <div class="item-info" style="font-size: 0.8rem; opacity: 0.7;">
+                    ${isRead ? '✓ 已阅读' : `阅读消耗: ${artifact.readSanityLoss}理智`}
+                </div>
+                ${!isRead && canRead.canExplore ? 
+                    `<button class="action-btn read-artifact-btn" data-read-id="${artifact.id}" style="margin-top: 0.5rem;">阅读</button>` : ''}
+                ${!isRead && !canRead.canExplore ? 
+                    `<div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--algae-red);">${canRead.reason}</div>` : ''}
+            `;
+
+            const readBtn = card.querySelector('.read-artifact-btn');
+            if (readBtn) {
+                readBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showArtifactRead(artifact);
+                });
+            }
+
+            contentGrid.appendChild(card);
+        });
+
+        this.explorationArtifacts.appendChild(contentGrid);
+    }
+
+    renderTalents() {
+        if (!this.explorationTalents || !this.explorationModule) return;
+
+        const talents = this.explorationModule.getPassiveTalents();
+
+        if (talents.length === 0) {
+            this.explorationTalents.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--ash-gray);">尚未解锁任何天赋，阅读文物以解锁！</div>';
+            return;
+        }
+
+        this.explorationTalents.innerHTML = '';
+        const contentGrid = document.createElement('div');
+        contentGrid.className = 'inventory-content';
+
+        talents.forEach(talent => {
+            const card = document.createElement('div');
+            card.className = 'item-card talent-card';
+            card.style.borderColor = 'var(--cthulhu-gold)';
+
+            let valueText = '';
+            if (talent.value > 0) {
+                valueText = `+${talent.value}%`;
+            }
+
+            card.innerHTML = `
+                <div class="item-name">✨ ${talent.name}</div>
+                <div class="item-info" style="color: var(--primary-green);">${valueText}</div>
+                <div class="item-info" style="font-size: 0.8rem; opacity: 0.7;">
+                    来源: ${talent.source || '未知'}
+                </div>
+            `;
+
+            contentGrid.appendChild(card);
+        });
+
+        this.explorationTalents.appendChild(contentGrid);
+    }
+
+    showArtifactRead(artifact) {
+        if (!this.artifactReadIcon || !this.artifactReadTitle || 
+            !this.artifactReadDescription || !this.artifactReadEffects) return;
+
+        this.artifactReadIcon.textContent = artifact.icon;
+        this.artifactReadTitle.textContent = artifact.name;
+        this.artifactReadDescription.innerHTML = `
+            <p style="margin-bottom: 1rem;">${artifact.description}</p>
+            <p style="color: var(--ash-gray); font-size: 0.9rem;">
+                ${artifact.readMessage}
+            </p>
+        `;
+
+        let effectsHtml = '';
+        if (artifact.effects) {
+            if (artifact.effects.unlocks && artifact.effects.unlocks.length > 0) {
+                effectsHtml += `<div style="margin-bottom: 0.5rem;">
+                    <strong>解锁内容:</strong>
+                    <ul style="margin-top: 0.25rem; padding-left: 1.5rem;">
+                        ${artifact.effects.unlocks.map(u => `<li>${u}</li>`).join('')}
+                    </ul>
+                </div>`;
+            }
+            if (artifact.effects.passive) {
+                effectsHtml += `<div style="color: var(--primary-green);">
+                    <strong>解锁天赋:</strong> ${artifact.effects.passive.name}
+                    ${artifact.effects.passive.value > 0 ? ` (+${artifact.effects.passive.value}%)` : ''}
+                </div>`;
+            }
+        }
+        effectsHtml += `<div style="margin-top: 1rem; color: var(--algae-red);">
+            <strong>理智消耗:</strong> ${artifact.readSanityLoss} 点
+        </div>`;
+
+        this.artifactReadEffects.innerHTML = effectsHtml;
+
+        const readBtn = document.getElementById('read-artifact-btn');
+        const cancelBtn = document.getElementById('cancel-artifact-read-btn');
+
+        if (readBtn) {
+            const oldReadHandler = readBtn._handler;
+            if (oldReadHandler) readBtn.removeEventListener('click', oldReadHandler);
+            
+            const newHandler = (e) => {
+                e.stopPropagation();
+                this.eventBus.emit('ui:readArtifact', artifact.id);
+            };
+            readBtn._handler = newHandler;
+            readBtn.addEventListener('click', newHandler);
+        }
+
+        if (cancelBtn) {
+            const oldCancelHandler = cancelBtn._handler;
+            if (oldCancelHandler) cancelBtn.removeEventListener('click', oldCancelHandler);
+            
+            const newHandler = (e) => {
+                e.stopPropagation();
+                this.hideModal('artifactRead');
+            };
+            cancelBtn._handler = newHandler;
+            cancelBtn.addEventListener('click', newHandler);
+        }
+
+        this.showModal('artifactRead');
+    }
+
+    showMysteryEvent(eventData) {
+        if (!this.eventIcon || !this.eventTitle || !this.eventDescription || !this.eventChoices) return;
+
+        this.eventIcon.textContent = eventData.icon || '❓';
+        this.eventTitle.textContent = eventData.name || '神秘事件';
+        this.eventDescription.textContent = eventData.description || '你遇到了一些奇怪的事情...';
+
+        this.eventChoices.innerHTML = '';
+
+        if (eventData.choices && eventData.choices.length > 0) {
+            eventData.choices.forEach(choice => {
+                const choiceBtn = document.createElement('button');
+                choiceBtn.className = 'action-btn event-choice-btn';
+                choiceBtn.textContent = choice.text;
+                choiceBtn.dataset.choiceId = choice.id;
+                choiceBtn.dataset.eventId = eventData.id;
+
+                choiceBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.eventBus.emit('ui:handleEventChoice', {
+                        eventId: eventData.id,
+                        choiceId: choice.id
+                    });
+                });
+
+                this.eventChoices.appendChild(choiceBtn);
+            });
+        } else {
+            const defaultChoice = document.createElement('button');
+            defaultChoice.className = 'action-btn event-choice-btn';
+            defaultChoice.textContent = '继续';
+            defaultChoice.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.hideModal('mysteryEvent');
+            });
+            this.eventChoices.appendChild(defaultChoice);
+        }
+
+        this.showModal('mysteryEvent');
+    }
+
+    showExplorationProgress() {
+        if (!this.explorationProgressBar) return;
+        this.explorationProgressBar.classList.remove('hidden');
+        if (this.explorationProgressFill) {
+            this.explorationProgressFill.style.width = '0%';
+        }
+        if (this.explorationProgressText) {
+            this.explorationProgressText.textContent = '探索中...';
+        }
+    }
+
+    updateExplorationProgress(progress) {
+        if (!this.explorationProgressFill) return;
+        const percent = Math.min(100, Math.max(0, progress * 100));
+        this.explorationProgressFill.style.width = `${percent}%`;
+        if (this.explorationProgressText) {
+            this.explorationProgressText.textContent = `探索中... ${Math.floor(percent)}%`;
+        }
+    }
+
+    hideExplorationProgress() {
+        if (!this.explorationProgressBar) return;
+        this.explorationProgressBar.classList.add('hidden');
     }
 }
 
