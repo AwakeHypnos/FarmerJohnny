@@ -76,6 +76,7 @@
                         <button class="func-button" id="merchant-btn">商人</button>
                         <button class="func-button" id="market-btn">市场</button>
                         <button class="func-button" id="warehouse-btn">仓库</button>
+                        <button class="func-button" id="exploration-btn">探索</button>
                         <button class="func-button" id="sleep-btn">睡觉</button>
                     </div>
                 </div>
@@ -247,6 +248,84 @@
                 </div>
             </div>
         </div>
+
+        <!-- 探索地图弹窗 -->
+        <div id="exploration-modal" class="modal hidden exploration-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>迷雾秘境</h2>
+                    <button class="close-btn" id="close-exploration">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="exploration-tabs">
+                        <button class="tab-button active" data-tab="exploration-map">地图</button>
+                        <button class="tab-button" data-tab="exploration-artifacts">文物</button>
+                        <button class="tab-button" data-tab="exploration-talents">天赋</button>
+                    </div>
+                    <div class="exploration-map" id="exploration-map">
+                        <div class="fog-overlay" id="fog-overlay">
+                            <!-- 迷雾将通过JavaScript动态生成 -->
+                        </div>
+                        <div class="regions-container" id="regions-container">
+                            <!-- 区域将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                    <div class="artifacts-content hidden" id="exploration-artifacts">
+                        <!-- 文物将通过JavaScript动态生成 -->
+                    </div>
+                    <div class="talents-content hidden" id="exploration-talents">
+                        <!-- 天赋将通过JavaScript动态生成 -->
+                    </div>
+                    <div class="exploration-progress hidden" id="exploration-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="exploration-progress-fill"></div>
+                        </div>
+                        <div class="progress-text" id="exploration-progress-text">探索中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 秘境事件弹窗 -->
+        <div id="mystery-event-modal" class="modal hidden mystery-event-modal">
+            <div class="modal-content">
+                <div class="modal-header event-header">
+                    <span class="event-icon" id="event-icon">❓</span>
+                    <h2 id="event-title">神秘事件</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="event-description" id="event-description">
+                        描述...
+                    </div>
+                    <div class="event-choices" id="event-choices">
+                        <!-- 选项将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文物阅读弹窗 -->
+        <div id="artifact-read-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="artifact-icon" id="artifact-read-icon">📜</span>
+                    <h2 id="artifact-read-title">文物</h2>
+                    <button class="close-btn" id="close-artifact-read">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="artifact-description" id="artifact-read-description">
+                        描述...
+                    </div>
+                    <div class="artifact-effects" id="artifact-read-effects">
+                        <!-- 效果将通过JavaScript动态生成 -->
+                    </div>
+                    <div class="artifact-actions">
+                        <button class="action-btn" id="read-artifact-btn">阅读</button>
+                        <button class="action-btn" id="cancel-artifact-read-btn">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="js/data/config/PlantConfig.js"></script>
@@ -254,6 +333,7 @@
     <script src="js/data/config/AnimalConfig.js"></script>
     <script src="js/data/config/SanityConfig.js"></script>
     <script src="js/data/config/PollutionConfig.js"></script>
+    <script src="js/data/config/ExplorationConfig.js"></script>
     
     <script src="js/utils/EventBus.js"></script>
     <script src="js/utils/Timer.js"></script>
@@ -271,6 +351,7 @@
     <script src="js/layers/business/core/EconomyModule.js"></script>
     <script src="js/layers/business/core/LivestockModule.js"></script>
     <script src="js/layers/business/core/SleepModule.js"></script>
+    <script src="js/layers/business/core/ExplorationModule.js"></script>
     
     <script src="js/layers/control/EventBinder.js"></script>
     <script src="js/layers/control/InputHandler.js"></script>

@@ -77,6 +77,18 @@ class InputHandler {
         this.eventBinder.bindClick('close-sleep', () => {
             this.eventBus.emit('input:hideSleep');
         });
+
+        this.eventBinder.bindClick('exploration-btn', () => {
+            this.eventBus.emit('input:showExploration');
+        });
+
+        this.eventBinder.bindClick('close-exploration', () => {
+            this.eventBus.emit('input:hideExploration');
+        });
+
+        this.eventBinder.bindClick('close-artifact-read', () => {
+            this.eventBus.emit('input:hideArtifactRead');
+        });
     }
 
     bindNavigationButtons() {

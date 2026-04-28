@@ -51,6 +51,15 @@ class FarmerJohnnyApp {
             this.sanityModule
         );
 
+        this.explorationModule = new ExplorationModule(
+            this.eventBus,
+            this.gameState,
+            this.timeModule,
+            this.environmentModule,
+            this.sanityModule,
+            this.pollutionModule
+        );
+
         this.animationManager = new AnimationManager(this.eventBus);
         this.effectManager = new EffectManager(this.eventBus);
 
@@ -64,6 +73,7 @@ class FarmerJohnnyApp {
             this.pollutionModule,
             this.livestockModule,
             this.sleepModule,
+            this.explorationModule,
             this.animationManager,
             this.effectManager
         );
@@ -78,6 +88,7 @@ class FarmerJohnnyApp {
             this.pollutionModule,
             this.livestockModule,
             this.sleepModule,
+            this.explorationModule,
             this.uiRenderer
         );
 
@@ -146,6 +157,7 @@ class FarmerJohnnyApp {
         this.farmingModule.init();
         this.economyModule.init();
         this.livestockModule.init();
+        this.explorationModule.init();
 
         this.uiRenderer.switchToGameScreen();
         this.uiRenderer.switchToFields();
@@ -201,6 +213,10 @@ class FarmerJohnnyApp {
             
             if (this.livestockModule && this.livestockModule.updateAnimalTimers) {
                 this.livestockModule.updateAnimalTimers(gameMinutesToAdvance);
+            }
+
+            if (this.explorationModule && this.explorationModule.updateExploration) {
+                this.explorationModule.updateExploration(gameMinutesToAdvance);
             }
 
             if (Math.floor(this.timeModule.state.minute) === 0) {

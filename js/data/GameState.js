@@ -11,14 +11,18 @@ class GameState {
             seeds: {},
             crops: {},
             items: {},
-            animalProducts: {}
+            animalProducts: {},
+            explorationItems: {},
+            artifacts: {}
         };
 
         this.warehouse = {
             seeds: {},
             crops: {},
             items: {},
-            animalProducts: {}
+            animalProducts: {},
+            explorationItems: {},
+            artifacts: {}
         };
 
         this.fertilizers = {};
@@ -52,20 +56,27 @@ class GameState {
             seeds: {},
             crops: {},
             items: {},
-            animalProducts: {}
+            animalProducts: {},
+            explorationItems: {},
+            artifacts: {}
         };
 
         this.warehouse = {
             seeds: {},
             crops: {},
             items: {},
-            animalProducts: {}
+            animalProducts: {},
+            explorationItems: {},
+            artifacts: {}
         };
 
         this.fertilizers = {
             basic_fertilizer: 0,
             premium_fertilizer: 0,
-            ancient_fertilizer: 0
+            ancient_fertilizer: 0,
+            corruption_fertilizer: 0,
+            flesh_fertilizer: 0,
+            forbidden_fertilizer: 0
         };
 
         this.captureTools = {
@@ -503,6 +514,56 @@ class GameState {
 
     clearDialogLog() {
         this.dialogLog = [];
+    }
+
+    getExplorationItemCount(itemType, fromWarehouse = false) {
+        if (fromWarehouse) {
+            return this.warehouse.explorationItems[itemType] || 0;
+        }
+        return this.inventory.explorationItems[itemType] || 0;
+    }
+
+    addExplorationItem(itemType, count = 1) {
+        if (!this.canAddToInventory(itemType, 'explorationItems', count)) {
+            return { success: false, reason: '背包已满' };
+        }
+        if (!this.inventory.explorationItems[itemType]) {
+            this.inventory.explorationItems[itemType] = 0;
+        }
+        this.inventory.explorationItems[itemType] += count;
+        return { success: true, count: this.inventory.explorationItems[itemType] };
+    }
+
+    removeExplorationItem(itemType, count = 1, fromWarehouse = false) {
+        const source = fromWarehouse ? this.warehouse.explorationItems : this.inventory.explorationItems;
+        if (source[itemType] && source[itemType] >= count) {
+            source[itemType] -= count;
+            return true;
+        }
+        return false;
+    }
+
+    hasExplorationItem(itemType) {
+        return this.getExplorationItemCount(itemType) > 0 || this.getExplorationItemCount(itemType, true) > 0;
+    }
+
+    getArtifactCount(artifactId, fromWarehouse = false) {
+        if (fromWarehouse) {
+            return this.warehouse.artifacts[artifactId] || 0;
+        }
+        return this.inventory.artifacts[artifactId] || 0;
+    }
+
+    addArtifact(artifactId, count = 1) {
+        if (!this.inventory.artifacts[artifactId]) {
+            this.inventory.artifacts[artifactId] = 0;
+        }
+        this.inventory.artifacts[artifactId] += count;
+        return { success: true, count: this.inventory.artifacts[artifactId] };
+    }
+
+    hasArtifact(artifactId) {
+        return this.getArtifactCount(artifactId) > 0 || this.getArtifactCount(artifactId, true) > 0;
     }
 
     getFullState() {

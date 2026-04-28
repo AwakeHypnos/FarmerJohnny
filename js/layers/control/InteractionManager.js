@@ -1,5 +1,5 @@
 class InteractionManager {
-    constructor(eventBus, farmingModule, economyModule, sanityModule, pollutionModule, livestockModule, sleepModule, uiRenderer) {
+    constructor(eventBus, farmingModule, economyModule, sanityModule, pollutionModule, livestockModule, sleepModule, explorationModule, uiRenderer) {
         this.eventBus = eventBus;
         this.farmingModule = farmingModule;
         this.economyModule = economyModule;
@@ -7,6 +7,7 @@ class InteractionManager {
         this.pollutionModule = pollutionModule;
         this.livestockModule = livestockModule;
         this.sleepModule = sleepModule;
+        this.explorationModule = explorationModule;
         this.uiRenderer = uiRenderer;
 
         this.currentFieldActions = null;
@@ -154,6 +155,32 @@ class InteractionManager {
 
         this.eventBus.on('ui:moveFromWarehouse', (data) => {
             this.handleMoveFromWarehouse(data.itemType, data.category);
+        });
+
+        this.eventBus.on('input:showExploration', () => {
+            this.uiRenderer.showModal('exploration');
+            this.uiRenderer.renderExplorationContent('exploration-map');
+            this.uiRenderer.bindExplorationTabs();
+        });
+
+        this.eventBus.on('input:hideExploration', () => {
+            this.uiRenderer.hideModal('exploration');
+        });
+
+        this.eventBus.on('input:hideArtifactRead', () => {
+            this.uiRenderer.hideModal('artifactRead');
+        });
+
+        this.eventBus.on('ui:startExploration', (regionId) => {
+            this.handleStartExploration(regionId);
+        });
+
+        this.eventBus.on('ui:readArtifact', (artifactId) => {
+            this.handleReadArtifact(artifactId);
+        });
+
+        this.eventBus.on('ui:handleEventChoice', (data) => {
+            this.handleEventChoice(data.eventId, data.choiceId);
         });
     }
 
@@ -507,6 +534,42 @@ class InteractionManager {
             this.uiRenderer.renderWarehouseContent();
         } else {
             this.uiRenderer.showInfo(result.reason);
+        }
+    }
+
+    handleStartExploration(regionId) {
+        if (!this.explorationModule) {
+            this.uiRenderer.showInfo('探索模块不可用。', 'warning');
+            return;
+        }
+
+        const result = this.explorationModule.startExploration(regionId);
+        if (!result.success) {
+            this.uiRenderer.showInfo(result.reason, 'warning');
+        }
+    }
+
+    handleReadArtifact(artifactId) {
+        if (!this.explorationModule) {
+            this.uiRenderer.showInfo('探索模块不可用。', 'warning');
+            return;
+        }
+
+        const result = this.explorationModule.readArtifact(artifactId);
+        if (!result.success) {
+            this.uiRenderer.showInfo(result.reason, 'warning');
+        }
+    }
+
+    handleEventChoice(eventId, choiceId) {
+        if (!this.explorationModule) {
+            this.uiRenderer.showInfo('探索模块不可用。', 'warning');
+            return;
+        }
+
+        const result = this.explorationModule.handleEventChoice(eventId, choiceId);
+        if (!result.success) {
+            this.uiRenderer.showInfo(result.reason, 'warning');
         }
     }
 }
