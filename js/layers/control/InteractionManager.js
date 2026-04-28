@@ -232,6 +232,26 @@ class InteractionManager {
         const result = this.sleepModule.startSleep(hours);
         if (!result.success) {
             this.uiRenderer.showInfo(result.reason, 'warning');
+            return;
+        }
+
+        const minutesToAdvance = Math.floor(result.hoursSlept * 60);
+        
+        if (this.farmingModule) {
+            this.farmingModule.updatePlantGrowth(minutesToAdvance);
+            if (this.farmingModule.updatePondGrowth) {
+                this.farmingModule.updatePondGrowth(minutesToAdvance);
+            }
+        }
+
+        if (this.livestockModule && this.livestockModule.updateAnimalTimers) {
+            this.livestockModule.updateAnimalTimers(minutesToAdvance);
+        }
+
+        this.uiRenderer.renderFields();
+        this.uiRenderer.renderBarn();
+        if (this.farmingModule && this.farmingModule.isPondUnlocked()) {
+            this.uiRenderer.renderPonds();
         }
     }
 
