@@ -1626,17 +1626,25 @@ class UIRenderer {
     }
 
     bindExplorationTabs() {
+        if (this._explorationTabHandler) {
+            const tabs = document.querySelectorAll('.exploration-tabs .tab-button');
+            tabs.forEach(tab => {
+                tab.removeEventListener('click', this._explorationTabHandler);
+            });
+        }
+
+        this._explorationTabHandler = (e) => {
+            const tab = e.currentTarget;
+            e.stopPropagation();
+            document.querySelectorAll('.exploration-tabs .tab-button').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            this.currentExplorationTab = tab.dataset.tab;
+            this.renderExplorationContent(tab.dataset.tab);
+        };
+
         const tabs = document.querySelectorAll('.exploration-tabs .tab-button');
         tabs.forEach(tab => {
-            const handler = (e) => {
-                e.stopPropagation();
-                document.querySelectorAll('.exploration-tabs .tab-button').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                this.currentExplorationTab = tab.dataset.tab;
-                this.renderExplorationContent(tab.dataset.tab);
-            };
-            tab.removeEventListener('click', handler);
-            tab.addEventListener('click', handler);
+            tab.addEventListener('click', this._explorationTabHandler);
         });
     }
 

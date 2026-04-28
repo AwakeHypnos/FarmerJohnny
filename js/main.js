@@ -163,6 +163,48 @@ class FarmerJohnnyApp {
         this.eventBus.on('input:returnToMainMenu', () => {
             this.returnToMainMenu();
         });
+
+        this.eventBus.on('input:loadGame', () => {
+            this.loadGameFromPause();
+        });
+    }
+
+    loadGameFromPause() {
+        this.logger.info('从暂停菜单加载存档...');
+
+        if (!this.saveManager.hasSave()) {
+            this.uiRenderer.showInfo('没有找到存档文件。');
+            return;
+        }
+
+        this.uiRenderer.hideModal('pause');
+
+        const success = this.saveManager.load(
+            this.gameState,
+            this.timeModule,
+            this.farmingModule,
+            this.sanityModule,
+            this.pollutionModule,
+            this.livestockModule,
+            this.sleepModule
+        );
+
+        if (success) {
+            this.uiRenderer.switchToGameScreen();
+            this.uiRenderer.switchToFields();
+            this.uiRenderer.showInfo('存档读取成功！');
+            
+            if (this.timer.hasInterval(this.timeLoopId)) {
+                this.timer.clearInterval(this.timeLoopId);
+            }
+            this.startTimeLoop();
+            
+            this.eventBus.emit('game:resumed');
+            this.logger.info('从暂停菜单加载存档成功');
+        } else {
+            this.uiRenderer.showInfo('读取存档失败。');
+            this.logger.error('从暂停菜单加载存档失败');
+        }
     }
 
     startNewGame() {
