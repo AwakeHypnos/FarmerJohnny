@@ -73,7 +73,8 @@ class UIRenderer {
             sleep: document.getElementById('sleep-modal'),
             exploration: document.getElementById('exploration-modal'),
             mysteryEvent: document.getElementById('mystery-event-modal'),
-            artifactRead: document.getElementById('artifact-read-modal')
+            artifactRead: document.getElementById('artifact-read-modal'),
+            pause: document.getElementById('pause-modal')
         };
 
         this.explorationMap = document.getElementById('exploration-map');
@@ -118,6 +119,13 @@ class UIRenderer {
 
         this.eventBus.on('economy:moneyChanged', () => {
             this.updateMoneyDisplay();
+        });
+
+        this.eventBus.on('economy:trapBought', (data) => {
+            this.showInfo(`成功购买了${data.trapName}！`);
+            if (this.currentView === 'fields') {
+                this.renderWildAnimals();
+            }
         });
 
         this.eventBus.on('farming:fieldsUpdated', () => {
@@ -871,21 +879,49 @@ class UIRenderer {
                 this.backpackContent.appendChild(card);
             });
         } else if (tabType === 'items') {
-            if (summary.fertilizers.length === 0) {
+            const hasFertilizers = summary.fertilizers.length > 0;
+            const hasTools = summary.captureTools && summary.captureTools.length > 0;
+            
+            if (!hasFertilizers && !hasTools) {
                 this.backpackContent.innerHTML = '<div style="grid-column: 1/-1; text-align: center; opacity: 0.7;">背包中没有物品</div>';
                 return;
             }
 
-            summary.fertilizers.forEach(fertilizer => {
-                const card = this.createItemCard(
-                    fertilizer.type,
-                    fertilizer.name,
-                    fertilizer.description,
-                    fertilizer.count,
-                    'fertilizer'
-                );
-                this.backpackContent.appendChild(card);
-            });
+            if (hasFertilizers) {
+                const fertilizerHeader = document.createElement('div');
+                fertilizerHeader.style.cssText = 'grid-column: 1/-1; font-size: 1rem; color: var(--old-cyan); margin-bottom: 0.5rem; border-bottom: 1px solid var(--shadow-gray); padding-bottom: 0.25rem;';
+                fertilizerHeader.textContent = '肥料';
+                this.backpackContent.appendChild(fertilizerHeader);
+                
+                summary.fertilizers.forEach(fertilizer => {
+                    const card = this.createItemCard(
+                        fertilizer.type,
+                        fertilizer.name,
+                        fertilizer.description,
+                        fertilizer.count,
+                        'fertilizer'
+                    );
+                    this.backpackContent.appendChild(card);
+                });
+            }
+
+            if (hasTools) {
+                const toolHeader = document.createElement('div');
+                toolHeader.style.cssText = 'grid-column: 1/-1; font-size: 1rem; color: var(--old-cyan); margin-bottom: 0.5rem; border-bottom: 1px solid var(--shadow-gray); padding-bottom: 0.25rem;';
+                toolHeader.textContent = '捕捉工具';
+                this.backpackContent.appendChild(toolHeader);
+                
+                summary.captureTools.forEach(tool => {
+                    const card = this.createItemCard(
+                        tool.type,
+                        tool.name,
+                        tool.description,
+                        tool.count,
+                        'tool'
+                    );
+                    this.backpackContent.appendChild(card);
+                });
+            }
         }
     }
 

@@ -493,7 +493,8 @@ class EconomyModule {
         return {
             seeds: this._getInventoryItems(this.gameState.inventory.seeds, PlantConfig),
             crops: this._getInventoryItems(this.gameState.inventory.crops, PlantConfig),
-            fertilizers: this.gameState.getAvailableFertilizers()
+            fertilizers: this.gameState.getAvailableFertilizers(),
+            captureTools: this.gameState.getAvailableCaptureTools()
         };
     }
 
