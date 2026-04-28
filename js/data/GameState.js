@@ -47,13 +47,17 @@ class GameState {
     init() {
         this.state = {
             isPlaying: true,
-            money: 1000,
+            money: 3000,
             sanity: 100,
             pollution: 0
         };
 
         this.inventory = {
-            seeds: {},
+            seeds: {
+                frostlettuce: 10,
+                twilight_carrot: 10,
+                shadow_potato: 10
+            },
             crops: {},
             items: {},
             animalProducts: {},

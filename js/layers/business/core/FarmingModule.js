@@ -23,6 +23,15 @@ class FarmingModule {
             corruptionAberrantPlantCount: 5
         };
 
+        this.pond = {
+            unlocked: false,
+            unlockDay: 7,
+            unlockCost: 1000,
+            totalPonds: 8,
+            unlockedPonds: 2,
+            ponds: []
+        };
+
         this.setupListeners();
     }
 
@@ -103,8 +112,28 @@ class FarmingModule {
                 awarenessType: null
             });
         }
+
+        this.pond.unlocked = false;
+        this.pond.ponds = [];
+        for (let i = 0; i < this.pond.totalPonds; i++) {
+            this.pond.ponds.push({
+                id: i,
+                unlocked: i < this.pond.unlockedPonds,
+                fieldType: this.FIELD_WATER,
+                plant: null,
+                watered: true,
+                fertilized: false,
+                fertilizerType: null,
+                growthProgress: 0,
+                stage: 0,
+                hasAwareness: false,
+                awarenessType: null
+            });
+        }
+
         this.selectedSeed = null;
         this.eventBus.emit('farming:fieldsUpdated', this.fields);
+        this.eventBus.emit('farming:pondUpdated', this.pond);
     }
 
     getFieldsState() {
@@ -643,6 +672,468 @@ class FarmingModule {
             }
         };
         return fieldTypeInfo[fieldType] || fieldTypeInfo.normal;
+    }
+
+    isPondUnlocked() {
+        return this.pond.unlocked;
+    }
+
+    canUnlockPond() {
+        const currentDay = this.timeModule.getDay();
+        if (this.pond.unlocked) {
+            return { canUnlock: false, reason: '池塘区域已解锁' };
+        }
+
+        if (currentDay < this.pond.unlockDay) {
+            return { 
+                canUnlock: false, 
+                reason: `需要达到第 ${this.pond.unlockDay} 天才能解锁池塘区域，当前为第 ${currentDay} 天` 
+            };
+        }
+
+        if (!this.gameState.hasEnoughMoney(this.pond.unlockCost)) {
+            return { 
+                canUnlock: false, 
+                reason: `资金不足，解锁池塘区域需要 ${this.pond.unlockCost} 金币` 
+            };
+        }
+
+        return { canUnlock: true, cost: this.pond.unlockCost };
+    }
+
+    unlockPond() {
+        const check = this.canUnlockPond();
+        if (!check.canUnlock) {
+            return { success: false, reason: check.reason };
+        }
+
+        this.gameState.subtractMoney(this.pond.unlockCost);
+        this.pond.unlocked = true;
+
+        this.eventBus.emit('farming:pondUnlocked', {
+            cost: this.pond.unlockCost
+        });
+        this.eventBus.emit('farming:pondUpdated', this.pond);
+        this.eventBus.emit('economy:moneyChanged', this.gameState.getMoney());
+
+        return { success: true, cost: this.pond.unlockCost };
+    }
+
+    getPondsState() {
+        return JSON.parse(JSON.stringify(this.pond));
+    }
+
+    loadPondsState(savedPond) {
+        if (savedPond) {
+            this.pond = JSON.parse(JSON.stringify(savedPond));
+            this.eventBus.emit('farming:pondUpdated', this.pond);
+        }
+    }
+
+    getPond(pondId) {
+        return this.pond.ponds[pondId];
+    }
+
+    getAllPonds() {
+        return [...this.pond.ponds];
+    }
+
+    isPondFieldUnlocked(pondId) {
+        const pond = this.pond.ponds[pondId];
+        return pond && pond.unlocked;
+    }
+
+    getPondUnlockPrice(pondId) {
+        const basePrice = 500;
+        const priceIncrement = 200;
+        return basePrice + pondId * priceIncrement;
+    }
+
+    canUnlockPondField(pondId) {
+        const pond = this.pond.ponds[pondId];
+        if (!pond || pond.unlocked) {
+            return { canUnlock: false, reason: '池塘地块已解锁或无效' };
+        }
+
+        const price = this.getPondUnlockPrice(pondId);
+        if (!this.gameState.hasEnoughMoney(price)) {
+            return { canUnlock: false, reason: `资金不足，需要 ${price} 金币`, price };
+        }
+
+        return { canUnlock: true, price };
+    }
+
+    unlockPondField(pondId) {
+        const check = this.canUnlockPondField(pondId);
+        if (!check.canUnlock) {
+            return { success: false, reason: check.reason };
+        }
+
+        const price = check.price;
+        this.gameState.subtractMoney(price);
+
+        const pond = this.pond.ponds[pondId];
+        pond.unlocked = true;
+
+        this.eventBus.emit('farming:pondFieldUnlocked', {
+            pondId,
+            price
+        });
+        this.eventBus.emit('farming:pondUpdated', this.pond);
+        this.eventBus.emit('economy:moneyChanged', this.gameState.getMoney());
+
+        return { success: true, price };
+    }
+
+    canPlantPond(pondId, seedType) {
+        const pond = this.pond.ponds[pondId];
+        const PlantConfig = window.PlantConfig || {};
+
+        if (!pond || !pond.unlocked) {
+            return { canPlant: false, reason: '池塘地块未解锁' };
+        }
+
+        if (pond.plant) {
+            return { canPlant: false, reason: '池塘已有植物' };
+        }
+
+        if (!this.gameState.hasSeed(seedType)) {
+            return { canPlant: false, reason: '背包中没有种子' };
+        }
+
+        const plantData = PlantConfig.getPlant ? PlantConfig.getPlant(seedType) : PlantConfig[seedType];
+        if (plantData && plantData.requiredFieldType && plantData.requiredFieldType !== this.FIELD_WATER) {
+            return { 
+                canPlant: false, 
+                reason: `${plantData.name}不能在池塘中种植，需要特定的土地类型` 
+            };
+        }
+
+        const currentSeason = this.timeModule.getSeason();
+        if (!this.environmentModule.isPlantInSeason(seedType)) {
+            const plant = PlantConfig.getPlant ? PlantConfig.getPlant(seedType) : PlantConfig[seedType];
+            return { 
+                canPlant: false, 
+                reason: `${plant ? plant.name : '该植物'}不能在${this.timeModule.getSeasonName()}季种植` 
+            };
+        }
+
+        if (plantData) {
+            const isNight = this.environmentModule.isNightTime();
+            if (plantData.canGrowAtDay === false && !isNight) {
+                return { 
+                    canPlant: false, 
+                    reason: `${plantData.name}只能在夜晚种植和生长` 
+                };
+            }
+            if (plantData.canGrowAtNight === false && isNight) {
+                return { 
+                    canPlant: false, 
+                    reason: `${plantData.name}只能在白天种植和生长` 
+                };
+            }
+        }
+
+        return { canPlant: true };
+    }
+
+    plantPond(pondId, seedType) {
+        const check = this.canPlantPond(pondId, seedType);
+        if (!check.canPlant) {
+            this.eventBus.emit('farming:error', { message: check.reason });
+            return { success: false, reason: check.reason };
+        }
+
+        const pond = this.pond.ponds[pondId];
+        const PlantConfig = window.PlantConfig || {};
+        const plantData = PlantConfig.getPlant ? PlantConfig.getPlant(seedType) : PlantConfig[seedType];
+
+        this.gameState.removeSeed(seedType);
+        pond.plant = seedType;
+        pond.stage = 0;
+        pond.growthProgress = 0;
+        pond.fertilized = false;
+        pond.fertilizerType = null;
+
+        this.clearSelectedSeed();
+
+        this.eventBus.emit('farming:planted', {
+            fieldId: pondId,
+            seedType,
+            plantName: plantData ? plantData.name : seedType,
+            isPond: true
+        });
+        this.eventBus.emit('farming:pondUpdated', this.pond);
+
+        return { success: true };
+    }
+
+    canHarvestPond(pondId) {
+        const pond = this.pond.ponds[pondId];
+        if (!pond || !pond.plant) {
+            return { canHarvest: false, reason: '没有植物' };
+        }
+
+        const PlantConfig = window.PlantConfig || {};
+        const plantData = PlantConfig.getPlant ? PlantConfig.getPlant(pond.plant) : PlantConfig[pond.plant];
+        
+        if (!plantData) {
+            return { canHarvest: false, reason: '植物数据无效' };
+        }
+
+        const isReady = pond.stage >= plantData.stages.length - 1;
+        if (!isReady) {
+            return { canHarvest: false, reason: '植物还未成熟' };
+        }
+
+        return { canHarvest: true };
+    }
+
+    harvestPond(pondId) {
+        const check = this.canHarvestPond(pondId);
+        if (!check.canHarvest) {
+            return { success: false, reason: check.reason };
+        }
+
+        const pond = this.pond.ponds[pondId];
+        const PlantConfig = window.PlantConfig || {};
+        const plantData = PlantConfig.getPlant ? PlantConfig.getPlant(pond.plant) : PlantConfig[pond.plant];
+
+        let harvestMessage = '';
+
+        if (plantData) {
+            if (plantData.sanityLossOnHarvest && this.sanityModule) {
+                const oldSanity = this.sanityModule.getSanity();
+                this.sanityModule.subtractSanity(plantData.sanityLossOnHarvest);
+                const newSanity = this.sanityModule.getSanity();
+                harvestMessage += `理智损失 ${oldSanity - newSanity} 点。`;
+            }
+
+            if (plantData.pollutionGainOnHarvest && this.pollutionModule) {
+                this.pollutionModule.addPollution(plantData.pollutionGainOnHarvest);
+            }
+
+            if (plantData.harvestCurses && plantData.harvestCurses.length > 0) {
+                const curseChance = 0.3;
+                if (Math.random() < curseChance) {
+                    const curseIndex = Math.floor(Math.random() * plantData.harvestCurses.length);
+                    const curse = plantData.harvestCurses[curseIndex];
+                    harvestMessage += `受到诅咒：${curse}！`;
+                    this.eventBus.emit('farming:curseApplied', {
+                        fieldId: pondId,
+                        plantType: pond.plant,
+                        curse: curse,
+                        isPond: true
+                    });
+                }
+            }
+
+            if (plantData.hasAwareness && pond.hasAwareness) {
+                this.triggerAwarenessEvent(pondId, pond.awarenessType, plantData);
+            }
+        }
+
+        let yieldMultiplier = 1;
+        if (plantData && plantData.highYield) {
+            yieldMultiplier = 2;
+        }
+
+        const result = this.gameState.addWarehouseCrop(pond.plant);
+        if (!result.success) {
+            this.eventBus.emit('farming:error', { message: result.reason });
+            return { success: false, reason: result.reason };
+        }
+
+        const harvestedPlant = pond.plant;
+        pond.plant = null;
+        pond.stage = 0;
+        pond.growthProgress = 0;
+        pond.fertilized = false;
+        pond.fertilizerType = null;
+        pond.hasAwareness = false;
+        pond.awarenessType = null;
+        pond.watered = true;
+
+        const harvestInfo = {
+            fieldId: pondId,
+            plantType: harvestedPlant,
+            plantName: plantData ? plantData.name : harvestedPlant,
+            yieldMultiplier,
+            isPond: true
+        };
+
+        if (harvestMessage) {
+            harvestInfo.message = harvestMessage;
+        }
+
+        this.eventBus.emit('farming:harvested', harvestInfo);
+        this.eventBus.emit('farming:pondUpdated', this.pond);
+
+        return { success: true };
+    }
+
+    applyPondFertilizer(pondId, fertilizerType) {
+        const pond = this.pond.ponds[pondId];
+        const FertilizerConfig = window.FertilizerConfig || {};
+
+        if (!pond || !pond.unlocked) {
+            return { success: false, reason: '池塘地块无效' };
+        }
+
+        if (pond.fertilized) {
+            return { success: false, reason: '已经施过肥了' };
+        }
+
+        if (!this.gameState.hasFertilizer(fertilizerType)) {
+            return { success: false, reason: '没有足够的肥料' };
+        }
+
+        this.gameState.removeFertilizer(fertilizerType);
+        pond.fertilized = true;
+        pond.fertilizerType = fertilizerType;
+
+        const fertilizer = FertilizerConfig.getFertilizer ? 
+            FertilizerConfig.getFertilizer(fertilizerType) : FertilizerConfig[fertilizerType];
+
+        this.eventBus.emit('farming:fertilized', {
+            fieldId: pondId,
+            fertilizerType,
+            fertilizerName: fertilizer ? fertilizer.name : fertilizerType,
+            isPond: true
+        });
+        this.eventBus.emit('farming:pondUpdated', this.pond);
+
+        return { success: true };
+    }
+
+    handlePondClick(pondId) {
+        const pond = this.pond.ponds[pondId];
+
+        if (!pond.unlocked) {
+            const check = this.canUnlockPondField(pondId);
+            this.eventBus.emit('farming:showPondUnlockOption', {
+                pondId,
+                canUnlock: check.canUnlock,
+                price: check.price || this.getPondUnlockPrice(pondId),
+                reason: check.reason
+            });
+            return;
+        }
+
+        if (!pond.plant) {
+            if (this.selectedSeed) {
+                this.plantPond(pondId, this.selectedSeed);
+            } else {
+                this.eventBus.emit('farming:needSeed');
+            }
+        } else {
+            this.eventBus.emit('farming:showFieldActions', {
+                fieldId: pondId,
+                field: { ...pond, isPond: true }
+            });
+        }
+    }
+
+    updatePondGrowth(gameMinutes) {
+        const PlantConfig = window.PlantConfig || {};
+        const FertilizerConfig = window.FertilizerConfig || {};
+        let needsUpdate = false;
+
+        const isNight = this.environmentModule.isNightTime();
+        const isRaining = this.environmentModule.isRaining ? this.environmentModule.isRaining() : false;
+        const isFoggy = this.environmentModule.isFoggy ? this.environmentModule.isFoggy() : false;
+
+        this.pond.ponds.forEach(pond => {
+            if (pond.plant) {
+                const plantData = PlantConfig.getPlant ? 
+                    PlantConfig.getPlant(pond.plant) : PlantConfig[pond.plant];
+                
+                if (!plantData) return;
+
+                if (plantData.canGrowAtDay === false && !isNight) {
+                    return;
+                }
+                if (plantData.canGrowAtNight === false && isNight) {
+                    return;
+                }
+
+                if (plantData.requiresAncientFertilizer && pond.fertilized && pond.fertilizerType) {
+                    const fertilizer = FertilizerConfig.getFertilizer ? 
+                        FertilizerConfig.getFertilizer(pond.fertilizerType) : 
+                        FertilizerConfig[pond.fertilizerType];
+                    
+                    if (fertilizer && fertilizer.id !== 'ancient_fertilizer') {
+                        pond.growthProgress += 0;
+                        return;
+                    }
+                }
+
+                let growthRate = 1;
+
+                if (pond.fertilized && pond.fertilizerType) {
+                    const fertilizer = FertilizerConfig.getFertilizer ? 
+                        FertilizerConfig.getFertilizer(pond.fertilizerType) : 
+                        FertilizerConfig[pond.fertilizerType];
+                    
+                    if (fertilizer) {
+                        growthRate += fertilizer.growthBoost;
+                    }
+                }
+
+                if (plantData.rainGrowthBoost && isRaining) {
+                    growthRate *= plantData.rainGrowthBoost;
+                }
+
+                if (plantData.fogGrowthBoost && isFoggy) {
+                    growthRate *= plantData.fogGrowthBoost;
+                }
+
+                const totalGrowthMinutes = plantData.growthTime.hours * 60 + plantData.growthTime.minutes;
+                const growthPerMinute = 1 / totalGrowthMinutes;
+
+                pond.growthProgress += growthPerMinute * gameMinutes * growthRate;
+
+                const totalStages = plantData.stages.length;
+                const progressPerStage = 1 / (totalStages - 1);
+
+                const newStage = Math.min(
+                    Math.floor(pond.growthProgress / progressPerStage),
+                    totalStages - 1
+                );
+
+                if (newStage > pond.stage) {
+                    pond.stage = newStage;
+                    needsUpdate = true;
+
+                    if (pond.stage >= totalStages - 1) {
+                        if (plantData.hasAwareness && !pond.hasAwareness) {
+                            if (Math.random() < plantData.awarenessChance) {
+                                pond.hasAwareness = true;
+                                pond.awarenessType = plantData.awarenessType;
+                                this.eventBus.emit('farming:plantAwakened', {
+                                    fieldId: pond.id,
+                                    plantType: pond.plant,
+                                    plantName: plantData.name,
+                                    awarenessType: plantData.awarenessType,
+                                    isPond: true
+                                });
+                            }
+                        }
+
+                        this.eventBus.emit('farming:plantReady', {
+                            fieldId: pond.id,
+                            plantType: pond.plant,
+                            plantName: plantData.name,
+                            isPond: true
+                        });
+                    }
+                }
+            }
+        });
+
+        if (needsUpdate) {
+            this.eventBus.emit('farming:pondUpdated', this.pond);
+        }
     }
 }
 
