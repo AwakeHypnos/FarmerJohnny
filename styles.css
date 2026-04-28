@@ -12,6 +12,7 @@
     --flesh-red: #5a2a2a;
     
     --abyss-purple: #3a2a4a;
+    --deep-purple: #2a1a3a;
     --void-indigo: #2a2a4a;
     --old-cyan: #2a4a5a;
     
@@ -19,28 +20,33 @@
     --rot-green: #2a5a4a;
     --stagnant-teal: #2a5a4a;
     
-    --bone-white: #e0e0e8;
-    --ash-gray: #c0c0c8;
-    --ghost-glow: #d8d8f0;
+    --bone-white: #e8e8f0;
+    --ash-gray: #c8c8d0;
+    --ghost-glow: #e0e0f8;
     
     --gold-dull: #7a6a4a;
     --gold-dark: #5a4a2a;
     
-    --algae-green: #3a7a5a;
-    --algae-green-bright: #4a9a6a;
+    --algae-green: #4a8a6a;
+    --algae-green-bright: #5aaa7a;
+    --algae-green-light: #6aba8a;
+    --algae-green-pale: #8aca9a;
     --algae-green-deep: #2a5a4a;
     --algae-gold: #c0a060;
+    --algae-gold-light: #d0b070;
     --algae-red: #9a4a4a;
+    --algae-red-light: #aa5a5a;
     --algae-blue: #4a6a8a;
+    --algae-blue-light: #5a7a9a;
     
-    --primary-green: #4a9a6a;
-    --primary-red: #9a4a4a;
-    --primary-blue: #4a6a9a;
+    --primary-green: #5aaa7a;
+    --primary-red: #aa5a5a;
+    --primary-blue: #5a7a9a;
     --primary-gold: #c0a060;
     
-    --text-bright: #f0f0f8;
-    --text-dim: #b0b0c0;
-    --border-light: #5a6a7a;
+    --text-bright: #f8f8fc;
+    --text-dim: #c0c0c8;
+    --border-light: #6a7a8a;
     --border-dark: #3a4a5a;
     
     --transition-fast: 0.2s ease;
@@ -57,37 +63,37 @@
 }
 
 body.day-theme {
-    --bg-main: #1a252a;
-    --bg-card: #25353a;
-    --bg-button: #2a4045;
-    --text-main: #f0f0f8;
-    --text-secondary: #c0c8d0;
-    --border-color: #4a6a5a;
-    --accent-color: var(--algae-green);
+    --bg-main: #2a3a35;
+    --bg-card: #3a4a45;
+    --bg-button: #4a5a55;
+    --text-main: #f8f8fc;
+    --text-secondary: #d8d8e0;
+    --border-color: #5a7a6a;
+    --accent-color: var(--algae-green-light);
     
-    --midnight-gray: #25353a;
-    --shadow-gray: #2a4045;
+    --midnight-gray: #3a4a45;
+    --shadow-gray: #4a5a55;
     --old-cyan: var(--algae-green-bright);
-    --mold-green: var(--algae-green);
-    --gold-dull: var(--algae-gold);
-    --blood-red: var(--algae-red);
+    --mold-green: var(--algae-green-light);
+    --gold-dull: var(--algae-gold-light);
+    --blood-red: var(--algae-red-light);
 }
 
 body.night-theme {
-    --bg-main: #0a0a10;
-    --bg-card: #12121a;
-    --bg-button: #1a1a25;
-    --text-main: #c8c8d0;
-    --text-secondary: #787888;
-    --border-color: #2a2a3a;
-    --accent-color: #2a1a3a;
+    --bg-main: #0a0510;
+    --bg-card: #120a1a;
+    --bg-button: #1a1025;
+    --text-main: #d0d0e0;
+    --text-secondary: #9090a0;
+    --border-color: #2a1a3a;
+    --accent-color: #3a2a4a;
     
-    --midnight-gray: #12121a;
-    --shadow-gray: #1a1a25;
-    --old-cyan: #1a2a3a;
-    --mold-green: #1a2a1a;
-    --gold-dull: #5a4a2a;
-    --blood-red: #5a1a1a;
+    --midnight-gray: #120a1a;
+    --shadow-gray: #1a1025;
+    --old-cyan: #2a1a3a;
+    --mold-green: #1a1a2a;
+    --gold-dull: #4a3a5a;
+    --blood-red: #5a2a4a;
 }
 
 * {
@@ -394,6 +400,7 @@ body {
 .game-area {
     flex: 1;
     padding: 2rem;
+    padding-right: 220px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1111,6 +1118,172 @@ body {
 .barn-upgrade {
     display: flex;
     align-items: center;
+}
+
+.field-type-normal {
+    background-color: var(--algae-green-deep);
+    border-color: var(--algae-green);
+}
+
+.field-type-corrupted {
+    background: linear-gradient(135deg, #3a1a2a 0%, #5a2a3a 50%, #4a1a3a 100%);
+    border-color: #8a4a6a;
+    box-shadow: inset 0 0 20px rgba(138, 74, 106, 0.3);
+}
+
+.field-type-corrupted::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="10" cy="10" r="1" fill="%238a4a6a" opacity="0.3"/><circle cx="30" cy="20" r="1.5" fill="%236a2a4a" opacity="0.4"/><circle cx="15" cy="30" r="1" fill="%239a5a7a" opacity="0.3"/></svg>');
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.field-type-water {
+    background: linear-gradient(180deg, #1a3a4a 0%, #2a4a5a 50%, #1a3a4a 100%);
+    border-color: var(--algae-blue);
+    box-shadow: inset 0 0 15px rgba(74, 106, 138, 0.5);
+    animation: water-ripple 3s ease-in-out infinite;
+}
+
+@keyframes water-ripple {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.plant-tier-normal .plant-name {
+    color: var(--algae-green-light);
+}
+
+.plant-tier-aberrant .plant-name {
+    color: #e080a0;
+    text-shadow: 0 0 10px rgba(224, 128, 160, 0.5);
+}
+
+.plant-tier-old_one .plant-name {
+    color: #c0a0e0;
+    text-shadow: 0 0 15px rgba(192, 160, 224, 0.6);
+    animation: forbidden-glow 2s ease-in-out infinite;
+}
+
+@keyframes forbidden-glow {
+    0%, 100% { text-shadow: 0 0 15px rgba(192, 160, 224, 0.6); }
+    50% { text-shadow: 0 0 25px rgba(224, 192, 255, 0.9), 0 0 35px rgba(192, 160, 224, 0.5); }
+}
+
+.plant-category-flesh .plant-name {
+    color: #c06080;
+}
+
+.plant-category-stellar .plant-name {
+    color: #a0c0e0;
+}
+
+.plant-category-deep .plant-name {
+    color: #60a0c0;
+}
+
+.plant-category-forbidden .plant-name {
+    color: #c0a0e0;
+}
+
+.plant-glowing {
+    animation: stellar-glow 2s ease-in-out infinite;
+}
+
+@keyframes stellar-glow {
+    0%, 100% { 
+        box-shadow: 0 0 10px rgba(160, 192, 224, 0.4), inset 0 0 10px rgba(160, 192, 224, 0.2);
+    }
+    50% { 
+        box-shadow: 0 0 20px rgba(160, 192, 224, 0.7), 0 0 30px rgba(160, 192, 224, 0.4), inset 0 0 15px rgba(160, 192, 224, 0.3);
+    }
+}
+
+.plant-awakened {
+    position: relative;
+}
+
+.plant-awakened::after {
+    content: '👁';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 0.8rem;
+    animation: eye-blink 4s infinite;
+    z-index: 10;
+}
+
+@keyframes eye-blink {
+    0%, 90%, 100% { opacity: 1; transform: scaleY(1); }
+    95% { opacity: 0.8; transform: scaleY(0.3); }
+}
+
+.fertilizer-corruption {
+    background-color: #5a2a3a !important;
+    border-color: #8a4a6a !important;
+}
+
+.fertilizer-ancient {
+    background-color: #3a2a4a !important;
+    border-color: #6a4a8a !important;
+}
+
+.fertilizer-forbidden {
+    background-color: #2a1a3a !important;
+    border-color: #5a3a7a !important;
+    animation: forbidden-pulse 2s ease-in-out infinite;
+}
+
+@keyframes forbidden-pulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(90, 58, 122, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(122, 80, 160, 0.8); }
+}
+
+.field-type-indicator {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.field-type-indicator.normal {
+    background-color: var(--algae-green);
+}
+
+.field-type-indicator.corrupted {
+    background-color: #8a4a6a;
+}
+
+.field-type-indicator.water {
+    background-color: var(--algae-blue);
+}
+
+.field-corruption-progress {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    right: 2px;
+    height: 3px;
+    background: var(--shadow-gray);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.field-corruption-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #5a2a3a, #8a4a6a);
+    transition: width 0.3s ease;
 }
 
 .upgrade-barn-btn {

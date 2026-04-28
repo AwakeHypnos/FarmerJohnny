@@ -25,7 +25,9 @@ class FarmerJohnnyApp {
             this.eventBus, 
             this.gameState, 
             this.timeModule, 
-            this.environmentModule
+            this.environmentModule,
+            this.sanityModule,
+            this.pollutionModule
         );
 
         this.economyModule = new EconomyModule(
