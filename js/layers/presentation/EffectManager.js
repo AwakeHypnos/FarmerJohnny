@@ -24,9 +24,13 @@ class EffectManager {
         if (isNight) {
             if (!document.body.classList.contains('night-theme')) {
                 document.body.classList.add('night-theme');
+                document.body.classList.remove('day-theme');
             }
         } else {
-            document.body.classList.remove('night-theme');
+            if (!document.body.classList.contains('day-theme')) {
+                document.body.classList.add('day-theme');
+                document.body.classList.remove('night-theme');
+            }
         }
     }
 

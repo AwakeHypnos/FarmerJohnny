@@ -852,10 +852,12 @@ class FarmerJohnnyGame {
         
         if (isNight && !document.body.classList.contains('night-theme')) {
             document.body.classList.add('night-theme');
+            document.body.classList.remove('day-theme');
             if (hour === 18) {
                 this.showInfo('夜幕降临，古老的力量开始苏醒...');
             }
-        } else if (!isNight && document.body.classList.contains('night-theme')) {
+        } else if (!isNight && !document.body.classList.contains('day-theme')) {
+            document.body.classList.add('day-theme');
             document.body.classList.remove('night-theme');
             if (hour === 6) {
                 this.showInfo('黎明破晓，新的一天开始了。');

@@ -15,6 +15,8 @@ class InteractionManager {
     }
 
     setupListeners() {
+        this.bindModalClickOutside();
+        
         this.eventBus.on('input:startGame', () => {
             this.eventBus.emit('game:startNew');
         });
@@ -341,16 +343,20 @@ class InteractionManager {
         if (!fieldElement) return;
 
         const field = this.farmingModule.getField(fieldId);
-        const isReady = this.farmingModule.isPlantReady(fieldId);
+        const hasPlant = field.plant !== null;
+        const isReady = hasPlant ? this.farmingModule.isPlantReady(fieldId) : false;
 
         const actionContainer = document.createElement('div');
         actionContainer.className = 'action-buttons field-action-buttons';
         actionContainer.style.marginTop = '0.5rem';
 
-        const waterBtn = this.createActionButton('浇水', !field.watered, () => {
-            this.handleWaterField(fieldId);
-            actionContainer.remove();
-        });
+        if (hasPlant) {
+            const waterBtn = this.createActionButton('浇水', !field.watered, () => {
+                this.handleWaterField(fieldId);
+                actionContainer.remove();
+            });
+            actionContainer.appendChild(waterBtn);
+        }
 
         const availableFertilizers = this.economyModule.gameState.getAvailableFertilizers();
         const fertilizerBtn = this.createActionButton(
@@ -361,8 +367,6 @@ class InteractionManager {
                 actionContainer.remove();
             }
         );
-
-        actionContainer.appendChild(waterBtn);
         actionContainer.appendChild(fertilizerBtn);
 
         if (isReady) {
@@ -876,6 +880,21 @@ class InteractionManager {
         } else if (currentView === 'pond') {
             this.eventBus.emit('ui:switchToFields');
         }
+    }
+
+    bindModalClickOutside() {
+        const modalNames = ['backpack', 'merchant', 'market', 'warehouse', 'developer', 'log', 'sleep', 'exploration', 'mysteryEvent', 'artifactRead', 'pause'];
+        
+        modalNames.forEach(modalName => {
+            const modal = document.getElementById(`${modalName}-modal`);
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        this.eventBus.emit(`input:hide${modalName.charAt(0).toUpperCase() + modalName.slice(1)}`);
+                    }
+                });
+            }
+        });
     }
 }
 
