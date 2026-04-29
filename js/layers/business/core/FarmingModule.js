@@ -19,9 +19,16 @@ class FarmingModule {
         this.FIELD_BLOOD = 'blood';
         this.FIELD_ASTRAL = 'astral';
         this.FIELD_WATER = 'water';
+        this.FIELD_STELLAR_RIFT = 'stellar_rift';
+        this.FIELD_DEEP_OOZE = 'deep_ooze';
+        this.FIELD_UNDERGROUND_MOSS = 'underground_moss';
 
         this.CORRUPTION_FERTILIZER_THRESHOLD = 3;
         this.CORRUPTION_PLANT_THRESHOLD = 5;
+
+        this.DAILY_CORRUPTION_BASE_CHANCE = 0.10;
+        this.DAILY_CORRUPTION_CHANCE_INCREMENT = 0.05;
+        this.MAX_CORRUPTION_CHANCE = 0.80;
 
         this.CATEGORY_STELLAR = 'stellar';
         this.CATEGORY_FLESH = 'flesh';
@@ -107,6 +114,7 @@ class FarmingModule {
 
         this.eventBus.on('time:dawn', () => {
             this.resetDailyFieldStates();
+            this.processDailyCorruptionCheck();
         });
 
         this.eventBus.on('time:seasonChanged', (data) => {
@@ -138,7 +146,10 @@ class FarmingModule {
                 growthProgress: 0,
                 stage: 0,
                 hasAwareness: false,
-                awarenessType: null
+                awarenessType: null,
+                corruptionChance: 0,
+                corruptionDaysApplied: 0,
+                pendingCorruptionType: null
             });
         }
 
@@ -746,6 +757,111 @@ class FarmingModule {
         this.eventBus.emit('farming:fieldsUpdated', this.fields);
     }
 
+    processDailyCorruptionCheck() {
+        const FertilizerConfig = window.FertilizerConfig || {};
+
+        this.fields.forEach(field => {
+            if (!field.unlocked) return;
+
+            if (!field.fertilized || !field.fertilizerType) return;
+
+            const fertilizer = FertilizerConfig.getFertilizer ? 
+                FertilizerConfig.getFertilizer(field.fertilizerType) : 
+                FertilizerConfig[field.fertilizerType];
+
+            if (!fertilizer || !fertilizer.isCorruption) return;
+
+            if (field.corruptionDaysApplied === 0) {
+                field.corruptionChance = this.DAILY_CORRUPTION_BASE_CHANCE;
+            } else {
+                field.corruptionChance = Math.min(
+                    field.corruptionChance + this.DAILY_CORRUPTION_CHANCE_INCREMENT,
+                    this.MAX_CORRUPTION_CHANCE
+                );
+            }
+            field.corruptionDaysApplied++;
+
+            this.eventBus.emit('farming:corruptionChanceUpdated', {
+                fieldId: field.id,
+                corruptionChance: field.corruptionChance,
+                corruptionDaysApplied: field.corruptionDaysApplied
+            });
+
+            if (Math.random() < field.corruptionChance) {
+                this.performFieldCorruption(field.id, fertilizer.corruptionType);
+            }
+        });
+    }
+
+    performFieldCorruption(fieldId, corruptionType) {
+        const field = this.fields[fieldId];
+        if (!field) return;
+
+        const PlantConfig = window.PlantConfig || {};
+        const fieldTypeInfo = this.getFieldTypeInfo(field.fieldType);
+
+        this.eventBus.emit('farming:corruptionAttempt', {
+            fieldId,
+            fieldType: field.fieldType,
+            fieldTypeName: fieldTypeInfo.name,
+            corruptionType
+        });
+
+        if (field.plant) {
+            const plantData = PlantConfig.getPlant ? 
+                PlantConfig.getPlant(field.plant) : PlantConfig[field.plant];
+
+            if (plantData && plantData.tier === this.TIER_NORMAL) {
+                const plantName = plantData.name || field.plant;
+                field.plant = null;
+                field.stage = 0;
+                field.growthProgress = 0;
+
+                this.eventBus.emit('farming:cropWilted', {
+                    fieldId,
+                    plantType: field.plant,
+                    plantName,
+                    reason: '土地腐化导致普通作物枯萎'
+                });
+            }
+        }
+
+        let targetFieldType = this.FIELD_CORRUPTED;
+
+        if (corruptionType === 'corruption') {
+            targetFieldType = this.FIELD_ALIENATED;
+        } else if (corruptionType === 'flesh') {
+            targetFieldType = this.FIELD_BLOOD;
+        } else if (corruptionType === 'astral') {
+            targetFieldType = this.FIELD_ASTRAL;
+        }
+
+        const oldFieldType = field.fieldType;
+        const oldFieldTypeName = this.getFieldTypeInfo(oldFieldType).name;
+
+        field.fieldType = targetFieldType;
+        field.corruptionChance = 0;
+        field.corruptionDaysApplied = 0;
+        field.pendingCorruptionType = null;
+
+        const newFieldTypeName = this.getFieldTypeInfo(targetFieldType).name;
+
+        this.eventBus.emit('farming:fieldCorrupted', {
+            fieldId,
+            fieldType: targetFieldType,
+            fieldTypeName: newFieldTypeName,
+            oldFieldType,
+            oldFieldTypeName,
+            corruptionType
+        });
+
+        this.eventBus.emit('farming:info', {
+            message: `田块${fieldId + 1}被${corruptionType === 'corruption' ? '污染' : corruptionType === 'flesh' ? '血肉' : '禁忌'}力量腐化，从${oldFieldTypeName}变为${newFieldTypeName}！`
+        });
+
+        this.eventBus.emit('farming:fieldsUpdated', this.fields);
+    }
+
     checkStarVisitorTrigger(fieldId, plantData) {
         if (this.starVisitorState) {
             return;
@@ -1020,6 +1136,27 @@ class FarmingModule {
                 name: '池塘',
                 description: '适合种植水生作物',
                 color: '#4a6a8a'
+            },
+            stellar_rift: {
+                name: '星空裂隙田',
+                description: '来自星空深处的神秘裂隙，种植旧日专属星空植物',
+                color: '#1a1a3e',
+                isRare: true,
+                requiredCategory: 'stellar'
+            },
+            deep_ooze: {
+                name: '深海淤泥田',
+                description: '来自深海的神秘淤泥，种植旧日专属深海植物',
+                color: '#0a2a2a',
+                isRare: true,
+                requiredCategory: 'deep'
+            },
+            underground_moss: {
+                name: '地底苔藓田',
+                description: '来自地底的神秘苔藓田，种植旧日专属地底植物',
+                color: '#1a2e1a',
+                isRare: true,
+                requiredCategory: 'forbidden'
             }
         };
         return fieldTypeInfo[fieldType] || fieldTypeInfo.normal;

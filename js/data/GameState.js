@@ -476,7 +476,12 @@ class GameState {
             produceTimer: -initialProduceDelay,
             hungry: false,
             sick: false,
-            acquiredAt: Date.now()
+            acquiredAt: Date.now(),
+            corruptionFeedCount: 0,
+            lastCalmedAt: null,
+            dayCounter: 0,
+            hasEscaped: false,
+            isMutated: animalData.isMutated || false
         };
 
         this.livestock.animals.push(newAnimal);
