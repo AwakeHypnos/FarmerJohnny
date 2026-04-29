@@ -135,6 +135,10 @@ class TimeModule {
         return (this.config.realMinutesPerGameDay * 60 * 1000) /
                (this.config.gameHoursPerDay * this.config.gameMinutesPerHour);
     }
+
+    getTotalMinutes() {
+        return (this.state.day - 1) * 24 * 60 + this.state.hour * 60 + this.state.minute;
+    }
 }
 
 if (typeof module !== 'undefined' && module.exports) {

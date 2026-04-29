@@ -111,7 +111,7 @@ body {
     color: var(--text-main);
     min-height: 100vh;
     overflow-x: hidden;
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1.6;
     transition: background-color var(--transition-medium), color var(--transition-medium);
 }
@@ -625,9 +625,9 @@ body {
 .modal-content {
     background-color: var(--midnight-gray);
     border: 2px solid var(--old-cyan);
-    width: 90%;
-    max-width: 550px;
-    max-height: 80vh;
+    width: 95%;
+    max-width: 700px;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
 }
@@ -709,18 +709,19 @@ body {
 .market-content,
 .warehouse-content {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1.2rem;
 }
 
 .item-card {
     background-color: var(--crow-gray);
     border: 1px solid var(--shadow-gray);
-    padding: 1rem;
+    padding: 1.2rem;
     text-align: center;
     cursor: pointer;
     transition: all var(--transition-fast);
     position: relative;
+    min-height: 120px;
 }
 
 .item-card:hover {
@@ -738,14 +739,15 @@ body {
 .item-name {
     font-weight: normal;
     margin-bottom: 0.5rem;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     color: var(--bone-white);
     letter-spacing: 0.05em;
 }
 
 .item-info {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--ash-gray);
+    line-height: 1.4;
 }
 
 .item-count {
@@ -754,17 +756,17 @@ body {
     right: 5px;
     background-color: var(--old-cyan);
     color: var(--bone-white);
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
 }
 
 .item-price {
     margin-top: 0.5rem;
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: var(--ghost-glow);
 }
 
