@@ -396,8 +396,13 @@ class FarmingModule {
     getRandomAberrantSeedForSeason() {
         const PlantConfig = window.PlantConfig || {};
         const currentSeason = this.timeModule.getSeason();
-        const allPlants = PlantConfig.getAllPlants ? PlantConfig.getAllPlants() : 
-                          (PlantConfig._data ? Object.values(PlantConfig._data) : []);
+        let allPlants = [];
+        if (PlantConfig.getAllPlants) {
+            const plantsObj = PlantConfig.getAllPlants();
+            allPlants = Array.isArray(plantsObj) ? plantsObj : Object.values(plantsObj);
+        } else if (PlantConfig._data) {
+            allPlants = Object.values(PlantConfig._data);
+        }
         
         const aberrantSeeds = allPlants.filter(p => 
             (p.tier === this.TIER_ABERRANT || p.tier === this.TIER_OLD_ONE) &&
@@ -565,7 +570,7 @@ class FarmingModule {
 
             if (sanityLoss > 0 && this.sanityModule) {
                 const oldSanity = this.sanityModule.getSanity();
-                this.sanityModule.subtractSanity(sanityLoss);
+                this.sanityModule.modifySanity(-sanityLoss, '收获作物');
                 const newSanity = this.sanityModule.getSanity();
                 harvestMessage += `理智损失 ${oldSanity - newSanity} 点。`;
             }
