@@ -571,14 +571,10 @@ class ExplorationModule {
             for (let i = 0; i < itemCount; i++) {
                 const itemId = region.rewards.items[Math.floor(Math.random() * region.rewards.items.length)];
                 const count = Math.floor(Math.random() * 3 * bonusMultiplier) + 1;
-                if (!this.gameState.inventory.items) {
-                    this.gameState.inventory.items = {};
+                const result = this.gameState.addExplorationItem(itemId, count);
+                if (result.success) {
+                    rewards.items.push({ id: itemId, count });
                 }
-                if (!this.gameState.inventory.items[itemId]) {
-                    this.gameState.inventory.items[itemId] = 0;
-                }
-                this.gameState.inventory.items[itemId] += count;
-                rewards.items.push({ id: itemId, count });
             }
         }
 
