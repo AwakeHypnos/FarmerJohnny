@@ -221,6 +221,7 @@ class FarmerJohnnyApp {
 
         this.uiRenderer.switchToGameScreen();
         this.uiRenderer.switchToFields();
+        this.uiRenderer.updateAllDisplays();
         this.uiRenderer.showInfo('游戏开始！你是一位神秘的农夫，在这片被古老力量笼罩的土地上开始了你的种植之旅。');
 
         this.startTimeLoop();
@@ -249,6 +250,7 @@ class FarmerJohnnyApp {
         if (success) {
             this.uiRenderer.switchToGameScreen();
             this.uiRenderer.switchToFields();
+            this.uiRenderer.updateAllDisplays();
             this.uiRenderer.showInfo('存档读取成功！');
             this.startTimeLoop();
             this.logger.info('存档加载成功');

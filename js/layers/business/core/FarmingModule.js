@@ -15,7 +15,13 @@ class FarmingModule {
 
         this.FIELD_NORMAL = 'normal';
         this.FIELD_CORRUPTED = 'corrupted';
+        this.FIELD_ALIENATED = 'alienated';
+        this.FIELD_BLOOD = 'blood';
+        this.FIELD_ASTRAL = 'astral';
         this.FIELD_WATER = 'water';
+
+        this.CORRUPTION_FERTILIZER_THRESHOLD = 3;
+        this.CORRUPTION_PLANT_THRESHOLD = 5;
 
         this.config = {
             baseUnlockPrice: 100,
@@ -104,7 +110,13 @@ class FarmingModule {
                 watered: false,
                 fertilized: false,
                 fertilizerType: null,
+                fertilizerAppliedSeason: null,
                 corruptionFertilizerCount: 0,
+                corruptionFertilizerType: null,
+                corruptionCountByType: {
+                    corruption: 0,
+                    flesh: 0
+                },
                 aberrantPlantCount: 0,
                 growthProgress: 0,
                 stage: 0,
@@ -290,7 +302,10 @@ class FarmingModule {
             if (this.selectedSeed) {
                 this.plantSeed(fieldId, this.selectedSeed);
             } else {
-                this.eventBus.emit('farming:needSeed');
+                this.eventBus.emit('farming:showFieldActions', {
+                    fieldId,
+                    field: this.getField(fieldId)
+                });
             }
         } else {
             this.eventBus.emit('farming:showFieldActions', {
@@ -334,12 +349,39 @@ class FarmingModule {
             return { success: false, reason: '没有足够的肥料' };
         }
 
+        const fertilizer = FertilizerConfig.getFertilizer ? 
+            FertilizerConfig.getFertilizer(fertilizerType) : FertilizerConfig[fertilizerType];
+
+        if (fertilizer && fertilizer.instantlyCorrupt) {
+            if (field.fieldType === this.FIELD_ASTRAL) {
+                return { success: false, reason: '田块已经是星界地块了' };
+            }
+            this.gameState.removeFertilizer(fertilizerType);
+            field.fieldType = this.FIELD_ASTRAL;
+            this.eventBus.emit('farming:fieldCorrupted', {
+                fieldId,
+                fieldType: this.FIELD_ASTRAL
+            });
+            this.eventBus.emit('farming:fieldsUpdated', this.fields);
+            return { success: true };
+        }
+
         this.gameState.removeFertilizer(fertilizerType);
         field.fertilized = true;
         field.fertilizerType = fertilizerType;
+        field.fertilizerAppliedSeason = this.timeModule.getSeason();
 
-        const fertilizer = FertilizerConfig.getFertilizer ? 
-            FertilizerConfig.getFertilizer(fertilizerType) : FertilizerConfig[fertilizerType];
+        if (fertilizer && fertilizer.isCorruption && fertilizer.corruptionType) {
+            if (!field.corruptionCountByType) {
+                field.corruptionCountByType = { corruption: 0, flesh: 0 };
+            }
+            
+            if (fertilizer.corruptionType === 'corruption' || fertilizer.corruptionType === 'flesh') {
+                field.corruptionCountByType[fertilizer.corruptionType]++;
+                field.corruptionFertilizerType = fertilizer.corruptionType;
+                this.checkFieldCorruptionByType(fieldId, fertilizer.corruptionType);
+            }
+        }
 
         this.eventBus.emit('farming:fertilized', {
             fieldId,
@@ -584,12 +626,21 @@ class FarmingModule {
                     plantsWilted = true;
                 }
             }
+
+            if (field.fertilized && field.fertilizerAppliedSeason !== null) {
+                if (field.fertilizerAppliedSeason !== newSeason) {
+                    field.fertilized = false;
+                    field.fertilizerType = null;
+                    field.fertilizerAppliedSeason = null;
+                }
+            }
         });
 
         if (plantsWilted) {
             this.eventBus.emit('farming:plantsWilted');
-            this.eventBus.emit('farming:fieldsUpdated', this.fields);
         }
+        
+        this.eventBus.emit('farming:fieldsUpdated', this.fields);
     }
 
     isPlantReady(fieldId) {
@@ -618,12 +669,49 @@ class FarmingModule {
         }
     }
 
+    checkFieldCorruptionByType(fieldId, corruptionType) {
+        const field = this.fields[fieldId];
+        if (!field) return;
+        
+        if (field.fieldType !== this.FIELD_NORMAL && 
+            field.fieldType !== this.FIELD_CORRUPTED) return;
+
+        if (!field.corruptionCountByType) {
+            field.corruptionCountByType = { corruption: 0, flesh: 0 };
+        }
+
+        const FertilizerConfig = window.FertilizerConfig || {};
+        
+        if (corruptionType === 'corruption') {
+            const threshold = 4;
+            if (field.corruptionCountByType.corruption >= threshold) {
+                field.fieldType = this.FIELD_ALIENATED;
+                this.eventBus.emit('farming:fieldCorrupted', {
+                    fieldId,
+                    fieldType: this.FIELD_ALIENATED
+                });
+            }
+        } else if (corruptionType === 'flesh') {
+            const threshold = 3;
+            if (field.corruptionCountByType.flesh >= threshold) {
+                field.fieldType = this.FIELD_BLOOD;
+                this.eventBus.emit('farming:fieldCorrupted', {
+                    fieldId,
+                    fieldType: this.FIELD_BLOOD
+                });
+            }
+        }
+    }
+
     applyCorruptionFertilizer(fieldId) {
         const field = this.fields[fieldId];
         if (!field || !field.unlocked) {
             return { success: false, reason: '田地无效' };
         }
-        if (field.fieldType === this.FIELD_CORRUPTED) {
+        if (field.fieldType === this.FIELD_CORRUPTED || 
+            field.fieldType === this.FIELD_ALIENATED ||
+            field.fieldType === this.FIELD_BLOOD ||
+            field.fieldType === this.FIELD_ASTRAL) {
             return { success: false, reason: '田地已经是腐化状态' };
         }
 
@@ -658,12 +746,27 @@ class FarmingModule {
             normal: {
                 name: '普通土地',
                 description: '适合种植常规作物，安全无副作用',
-                color: '#4a8a6a'
+                color: '#8B7355'
             },
             corrupted: {
                 name: '腐化土地',
                 description: '通过污染肥料或频繁种植异化作物改造，适合种植克苏鲁作物',
                 color: '#8a4a6a'
+            },
+            alienated: {
+                name: '异化田块',
+                description: '被污染肥料深度腐化，适合种植异化作物',
+                color: '#2F4F2F'
+            },
+            blood: {
+                name: '血红田块',
+                description: '被血肉肥料深度腐化，适合种植血肉类作物',
+                color: '#8B4513'
+            },
+            astral: {
+                name: '星界地块',
+                description: '被禁忌神肥腐化，神秘力量的栖息地',
+                color: '#483D8B'
             },
             water: {
                 name: '池塘',

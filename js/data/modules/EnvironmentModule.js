@@ -4,7 +4,7 @@ class EnvironmentModule {
         this.timeModule = timeModule;
         
         this.state = {
-            isNight: false
+            isNight: this.timeModule.isNight()
         };
 
         this.setupListeners();

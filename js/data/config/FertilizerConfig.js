@@ -28,32 +28,38 @@ const FertilizerConfig = {
         corruption_fertilizer: {
             id: 'corruption_fertilizer',
             name: '污染肥料',
-            description: '不会加速生长，但会逐渐腐化土地，适合种植异化作物',
+            description: '加速植物生长75%，施肥4次后使田块变为异化田块',
             buyPrice: 50,
-            growthBoost: 0,
+            growthBoost: 0.75,
             tier: 'aberrant',
             isCorruption: true,
-            corruptionValue: 1
+            corruptionType: 'corruption',
+            corruptionValue: 1,
+            corruptionThreshold: 4
         },
         flesh_fertilizer: {
             id: 'flesh_fertilizer',
             name: '血肉肥料',
-            description: '用血肉浇灌土地，大幅加速腐化，适合种植血肉类作物',
+            description: '加速植物生长75%，施肥3次后使田块变为血红田块',
             buyPrice: 100,
-            growthBoost: 0.2,
+            growthBoost: 0.75,
             tier: 'aberrant',
             isCorruption: true,
-            corruptionValue: 3
+            corruptionType: 'flesh',
+            corruptionValue: 3,
+            corruptionThreshold: 3
         },
         forbidden_fertilizer: {
             id: 'forbidden_fertilizer',
             name: '禁忌神肥',
-            description: '古老仪式中使用的神秘肥料，可用于催熟禁忌神植',
+            description: '古老仪式中使用的神秘肥料，可瞬间腐化地块为星界地块',
             buyPrice: 200,
             growthBoost: 0.3,
             tier: 'old_one',
             isAncient: true,
-            isForbidden: true
+            isForbidden: true,
+            corruptionType: 'astral',
+            instantlyCorrupt: true
         }
     },
 

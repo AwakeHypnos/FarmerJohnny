@@ -775,6 +775,10 @@ class UIRenderer {
             fieldElement.className = 'field';
             fieldElement.dataset.fieldId = index;
             
+            if (field.fieldType) {
+                fieldElement.classList.add(`field-type-${field.fieldType}`);
+            }
+            
             if (!field.unlocked) {
                 fieldElement.classList.add('locked');
                 const unlockPrice = this.farmingModule.getUnlockPrice ? 
