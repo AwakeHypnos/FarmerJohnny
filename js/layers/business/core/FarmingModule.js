@@ -234,19 +234,42 @@ class FarmingModule {
                 return fieldTypeCheck;
             }
 
-            if (plantData.requiredFieldType && plantData.requiredFieldType !== field.fieldType) {
-                const fieldTypeNames = {
-                    normal: '普通土地',
-                    corrupted: '腐化土地',
-                    alienated: '异化土地',
-                    blood: '血红土地',
-                    astral: '星界土地',
-                    water: '池塘'
-                };
-                return { 
-                    canPlant: false, 
-                    reason: `${plantData.name}需要${fieldTypeNames[plantData.requiredFieldType] || '特定类型的土地'}才能种植` 
-                };
+            if (plantData.requiredFieldType) {
+                const isCorruptedField = field.fieldType === this.FIELD_CORRUPTED || 
+                                         field.fieldType === this.FIELD_ALIENATED ||
+                                         field.fieldType === this.FIELD_BLOOD ||
+                                         field.fieldType === this.FIELD_ASTRAL;
+                
+                const isCorruptedRequired = plantData.requiredFieldType === 'corrupted';
+                const isWaterRequired = plantData.requiredFieldType === 'water';
+                const isNormalRequired = plantData.requiredFieldType === 'normal';
+                
+                let canPlantOnField = false;
+                
+                if (isCorruptedRequired && isCorruptedField) {
+                    canPlantOnField = true;
+                } else if (isWaterRequired && field.fieldType === this.FIELD_WATER) {
+                    canPlantOnField = true;
+                } else if (isNormalRequired && field.fieldType === this.FIELD_NORMAL) {
+                    canPlantOnField = true;
+                } else if (plantData.requiredFieldType === field.fieldType) {
+                    canPlantOnField = true;
+                }
+                
+                if (!canPlantOnField) {
+                    const fieldTypeNames = {
+                        normal: '普通土地',
+                        corrupted: '腐化土地',
+                        alienated: '异化土地',
+                        blood: '血红土地',
+                        astral: '星界土地',
+                        water: '池塘'
+                    };
+                    return { 
+                        canPlant: false, 
+                        reason: `${plantData.name}需要${fieldTypeNames[plantData.requiredFieldType] || '特定类型的土地'}才能种植` 
+                    };
+                }
             }
 
             if (plantData.requiredSanityLevel && this.sanityModule) {
@@ -341,8 +364,6 @@ class FarmingModule {
         field.stage = 0;
         field.growthProgress = 0;
         field.watered = false;
-        field.fertilized = false;
-        field.fertilizerType = null;
 
         this.clearSelectedSeed();
 
