@@ -23,6 +23,21 @@ class FarmingModule {
         this.CORRUPTION_FERTILIZER_THRESHOLD = 3;
         this.CORRUPTION_PLANT_THRESHOLD = 5;
 
+        this.CATEGORY_STELLAR = 'stellar';
+        this.CATEGORY_FLESH = 'flesh';
+        this.CATEGORY_FORBIDDEN = 'forbidden';
+        this.CATEGORY_DEEP = 'deep';
+
+        this.TIER_NORMAL = 'normal';
+        this.TIER_ABERRANT = 'aberrant';
+        this.TIER_OLD_ONE = 'old_one';
+
+        this.STAR_VISITOR_CHANCE = 0.33;
+        this.NORMAL_CROP_CORRUPTION_CHANCE = 0.5;
+        this.BLOOD_FIELD_GROWTH_BONUS = 0.5;
+        this.BLOOD_FIELD_YIELD_BONUS = 0.3;
+        this.BLOOD_FIELD_SANITY_LOSS_BONUS = 1.5;
+
         this.config = {
             baseUnlockPrice: 100,
             corruptionFertilizerCount: 3,
@@ -37,6 +52,8 @@ class FarmingModule {
             unlockedPonds: 2,
             ponds: []
         };
+
+        this.starVisitorState = null;
 
         this.setupListeners();
     }
@@ -212,10 +229,18 @@ class FarmingModule {
 
         const plantData = PlantConfig.getPlant ? PlantConfig.getPlant(seedType) : PlantConfig[seedType];
         if (plantData) {
+            const fieldTypeCheck = this.checkFieldTypeCompatibility(field.fieldType, plantData);
+            if (!fieldTypeCheck.canPlant) {
+                return fieldTypeCheck;
+            }
+
             if (plantData.requiredFieldType && plantData.requiredFieldType !== field.fieldType) {
                 const fieldTypeNames = {
                     normal: '普通土地',
                     corrupted: '腐化土地',
+                    alienated: '异化土地',
+                    blood: '血红土地',
+                    astral: '星界土地',
                     water: '池塘'
                 };
                 return { 
@@ -252,6 +277,41 @@ class FarmingModule {
         return { canPlant: true };
     }
 
+    checkFieldTypeCompatibility(fieldType, plantData) {
+        const isAberrantCrop = plantData.tier === this.TIER_ABERRANT || plantData.tier === this.TIER_OLD_ONE;
+        const isCorruptedField = fieldType === this.FIELD_CORRUPTED || 
+                                  fieldType === this.FIELD_ALIENATED ||
+                                  fieldType === this.FIELD_BLOOD ||
+                                  fieldType === this.FIELD_ASTRAL;
+
+        if (isAberrantCrop) {
+            if (isCorruptedField) {
+                return { canPlant: true };
+            } else if (fieldType === this.FIELD_NORMAL) {
+                return { 
+                    canPlant: false, 
+                    reason: `${plantData.name}只能在腐化或异化地块上种植` 
+                };
+            }
+        } else {
+            if (fieldType === this.FIELD_ALIENATED || 
+                fieldType === this.FIELD_BLOOD || 
+                fieldType === this.FIELD_ASTRAL) {
+                const fieldTypeNames = {
+                    alienated: '异化地块',
+                    blood: '血红地块',
+                    astral: '星界地块'
+                };
+                return { 
+                    canPlant: false, 
+                    reason: `普通作物无法在${fieldTypeNames[fieldType]}上种植，只能种植诡异作物` 
+                };
+            }
+        }
+
+        return { canPlant: true };
+    }
+
     plantSeed(fieldId, seedType) {
         const check = this.canPlant(fieldId, seedType);
         if (!check.canPlant) {
@@ -261,10 +321,23 @@ class FarmingModule {
 
         const field = this.fields[fieldId];
         const PlantConfig = window.PlantConfig || {};
-        const plantData = PlantConfig.getPlant ? PlantConfig.getPlant(seedType) : PlantConfig[seedType];
+        let plantData = PlantConfig.getPlant ? PlantConfig.getPlant(seedType) : PlantConfig[seedType];
+        let actualSeedType = seedType;
+        let corruptionMessage = null;
+
+        if (field.fieldType === this.FIELD_CORRUPTED && plantData && plantData.tier === this.TIER_NORMAL) {
+            if (Math.random() < this.NORMAL_CROP_CORRUPTION_CHANCE) {
+                const aberrantSeed = this.getRandomAberrantSeedForSeason();
+                if (aberrantSeed) {
+                    actualSeedType = aberrantSeed;
+                    plantData = PlantConfig.getPlant ? PlantConfig.getPlant(aberrantSeed) : PlantConfig[aberrantSeed];
+                    corruptionMessage = `${plantData ? plantData.name : seedType}受到腐化力量的影响，发生了诡异的变异！`;
+                }
+            }
+        }
 
         this.gameState.removeSeed(seedType);
-        field.plant = seedType;
+        field.plant = actualSeedType;
         field.stage = 0;
         field.growthProgress = 0;
         field.watered = false;
@@ -275,13 +348,35 @@ class FarmingModule {
 
         this.eventBus.emit('farming:planted', {
             fieldId,
-            seedType,
-            plantName: plantData ? plantData.name : seedType
+            seedType: actualSeedType,
+            plantName: plantData ? plantData.name : actualSeedType
         });
+
+        if (corruptionMessage) {
+            this.eventBus.emit('farming:info', { message: corruptionMessage });
+        }
 
         this.eventBus.emit('farming:fieldsUpdated', this.fields);
 
         return { success: true };
+    }
+
+    getRandomAberrantSeedForSeason() {
+        const PlantConfig = window.PlantConfig || {};
+        const currentSeason = this.timeModule.getSeason();
+        const allPlants = PlantConfig.getAllPlants ? PlantConfig.getAllPlants() : 
+                          (PlantConfig._data ? Object.values(PlantConfig._data) : []);
+        
+        const aberrantSeeds = allPlants.filter(p => 
+            (p.tier === this.TIER_ABERRANT || p.tier === this.TIER_OLD_ONE) &&
+            p.seasons && p.seasons.includes(currentSeason)
+        );
+
+        if (aberrantSeeds.length > 0) {
+            const randomIndex = Math.floor(Math.random() * aberrantSeeds.length);
+            return aberrantSeeds[randomIndex].id;
+        }
+        return null;
     }
 
     handleFieldClick(fieldId) {
@@ -427,9 +522,18 @@ class FarmingModule {
         let harvestMessage = '';
 
         if (plantData) {
-            if (plantData.sanityLossOnHarvest && this.sanityModule) {
+            let sanityLoss = plantData.sanityLossOnHarvest || 0;
+            let yieldBonus = 1;
+
+            if (field.fieldType === this.FIELD_BLOOD && plantData.category === this.CATEGORY_FLESH) {
+                sanityLoss = Math.floor(sanityLoss * this.BLOOD_FIELD_SANITY_LOSS_BONUS);
+                yieldBonus = 1 + this.BLOOD_FIELD_YIELD_BONUS;
+                harvestMessage += '血红地块的力量增强了血肉作物的产出，但也带来了更大的理智侵蚀。';
+            }
+
+            if (sanityLoss > 0 && this.sanityModule) {
                 const oldSanity = this.sanityModule.getSanity();
-                this.sanityModule.subtractSanity(plantData.sanityLossOnHarvest);
+                this.sanityModule.subtractSanity(sanityLoss);
                 const newSanity = this.sanityModule.getSanity();
                 harvestMessage += `理智损失 ${oldSanity - newSanity} 点。`;
             }
@@ -465,6 +569,9 @@ class FarmingModule {
         let yieldMultiplier = 1;
         if (plantData && plantData.highYield) {
             yieldMultiplier = 2;
+        }
+        if (field.fieldType === this.FIELD_BLOOD && plantData && plantData.category === this.CATEGORY_FLESH) {
+            yieldMultiplier += this.BLOOD_FIELD_YIELD_BONUS;
         }
 
         const result = this.gameState.addWarehouseCrop(field.plant);
@@ -546,6 +653,10 @@ class FarmingModule {
                     }
                 }
 
+                if (field.fieldType === this.FIELD_BLOOD && plantData.category === this.CATEGORY_FLESH) {
+                    growthRate += this.BLOOD_FIELD_GROWTH_BONUS;
+                }
+
                 if (plantData.rainGrowthBoost && isRaining) {
                     growthRate *= plantData.rainGrowthBoost;
                 }
@@ -585,6 +696,10 @@ class FarmingModule {
                             }
                         }
 
+                        if (field.fieldType === this.FIELD_ASTRAL && plantData.category === this.CATEGORY_STELLAR) {
+                            this.checkStarVisitorTrigger(field.id, plantData);
+                        }
+
                         this.eventBus.emit('farming:plantReady', {
                             fieldId: field.id,
                             plantType: field.plant,
@@ -610,9 +725,121 @@ class FarmingModule {
         this.eventBus.emit('farming:fieldsUpdated', this.fields);
     }
 
+    checkStarVisitorTrigger(fieldId, plantData) {
+        if (this.starVisitorState) {
+            return;
+        }
+
+        if (Math.random() < this.STAR_VISITOR_CHANCE) {
+            this.eventBus.emit('farming:info', { 
+                message: `${plantData.name}成熟时释放出奇异的精神迷雾，向宇宙深处发送着召唤...` 
+            });
+
+            if (Math.random() < this.STAR_VISITOR_CHANCE) {
+                this.summonStarVisitor(fieldId);
+            }
+        }
+    }
+
+    summonStarVisitor(triggerFieldId) {
+        const triggerField = this.fields[triggerFieldId];
+        const PlantConfig = window.PlantConfig || {};
+        
+        const affectedFields = [];
+        const fieldsToMutate = [];
+        
+        this.fields.forEach((field, index) => {
+            if (field.unlocked) {
+                const distance = Math.abs(index - triggerFieldId);
+                if (distance <= 2) {
+                    affectedFields.push(index);
+                    
+                    if (Math.random() < 0.3) {
+                        fieldsToMutate.push(index);
+                    }
+                }
+            }
+        });
+
+        fieldsToMutate.forEach(fieldId => {
+            const field = this.fields[fieldId];
+            if (field.plant) {
+                const aberrantSeed = this.getRandomAberrantSeedForSeason();
+                if (aberrantSeed) {
+                    const aberrantData = PlantConfig.getPlant ? 
+                        PlantConfig.getPlant(aberrantSeed) : PlantConfig[aberrantSeed];
+                    field.plant = aberrantSeed;
+                    field.stage = 0;
+                    field.growthProgress = 0;
+                    this.eventBus.emit('farming:info', { 
+                        message: `田块${fieldId + 1}的作物受到星之彩的影响，发生了奇异的变异！` 
+                    });
+                }
+            }
+        });
+
+        this.starVisitorState = {
+            active: true,
+            triggerFieldId,
+            affectedFields,
+            fieldsToMutate,
+            arrivalSeason: this.timeModule.getSeason(),
+            arrivalDay: this.timeModule.getDay()
+        };
+
+        this.eventBus.emit('farming:starVisitorArrived', {
+            triggerFieldId,
+            affectedFields
+        });
+        this.eventBus.emit('farming:info', { 
+            message: '星之彩回应了召唤，从宇宙深处降临！它的存在使周围的农田发生着不可预测的变化...' 
+        });
+    }
+
+    checkStarVisitorDeparture(newSeason) {
+        if (!this.starVisitorState || !this.starVisitorState.active) {
+            return;
+        }
+
+        if (this.starVisitorState.arrivalSeason !== newSeason) {
+            this.dismissStarVisitor();
+        }
+    }
+
+    dismissStarVisitor(voluntary = false) {
+        if (!this.starVisitorState) return;
+
+        const PlantConfig = window.PlantConfig || {};
+        
+        this.starVisitorState.affectedFields.forEach(fieldId => {
+            const field = this.fields[fieldId];
+            if (field.unlocked) {
+                if (field.plant) {
+                    field.plant = null;
+                    field.stage = 0;
+                    field.growthProgress = 0;
+                }
+            }
+        });
+
+        const message = voluntary ? 
+            '通过神秘的仪式，星之彩被送回了宇宙深处。但它的离去也带走了周围农田的生机...' :
+            '星之彩完成了它的使命，返回宇宙深处。它的离去带走了周围农田的所有生机...';
+
+        this.eventBus.emit('farming:starVisitorDeparted', {
+            affectedFields: this.starVisitorState.affectedFields
+        });
+        this.eventBus.emit('farming:info', { message });
+
+        this.starVisitorState = null;
+        this.eventBus.emit('farming:fieldsUpdated', this.fields);
+    }
+
     handleSeasonChange(newSeason) {
         const PlantConfig = window.PlantConfig || {};
         let plantsWilted = false;
+
+        this.checkStarVisitorDeparture(newSeason);
 
         this.fields.forEach(field => {
             if (field.plant) {
