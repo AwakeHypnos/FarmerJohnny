@@ -108,11 +108,17 @@ class LivestockModule {
             this.trySpawnWildAnimal();
             this.updateWildAnimalDeparture();
             this.updateAnimalTimers(60);
+            this.processPhantasmalHourlySanityLoss();
         });
 
         this.eventBus.on('time:newDay', () => {
             this.updateAnimalTimers(1440);
             this.tryAnimalBreeding();
+            this.incrementAnimalDayCounter();
+            this.checkAnimalMutation();
+            this.checkAnimalCalming();
+            this.checkPhantasmalEscape();
+            this.processPollutionFromCorruptedBarn();
         });
 
         this.eventBus.on('ui:captureWildAnimal', (data) => {
@@ -133,6 +139,10 @@ class LivestockModule {
 
         this.eventBus.on('ui:upgradeBarn', () => {
             this.upgradeBarn();
+        });
+
+        this.eventBus.on('ui:calmAnimal', (data) => {
+            this.calmAnimal(data.animalId, data.calmType);
         });
     }
 
@@ -450,21 +460,42 @@ class LivestockModule {
 
     feedAnimal(animalId, cropType = null) {
         const PlantConfig = window.PlantConfig || {};
+        const AnimalConfig = window.AnimalConfig || {};
         const animal = this.gameState.getAnimal(animalId);
 
         if (!animal) {
             return { success: false, reason: '动物不存在' };
         }
 
+        const animalData = AnimalConfig.getDomesticAnimal ? 
+            AnimalConfig.getDomesticAnimal(animal.type) : null;
+
+        if (animalData && animalData.requiresCorruptedFeed && !cropType) {
+            return { success: false, reason: '该生物需要腐败作物才能喂养' };
+        }
+
         let fedSuccessfully = false;
         let bonusEffect = false;
+        let isCorruptedCrop = false;
 
         if (cropType) {
+            const cropData = PlantConfig.getPlant ? PlantConfig.getPlant(cropType) : PlantConfig[cropType];
+            
+            if (cropData && (cropData.tier === 'aberrant' || cropData.tier === 'old_one' || cropData.isTaboo)) {
+                isCorruptedCrop = true;
+            }
+
+            if (animalData && animalData.requiresForbiddenFeed) {
+                if (!isCorruptedCrop) {
+                    return { success: false, reason: '该眷属需要禁忌饲料才能喂养' };
+                }
+            }
+
             const canFeed = PlantConfig.hasAnimalFeed ? 
                 PlantConfig.hasAnimalFeed(cropType, animal.type) : 
                 this._checkAnimalFeedCompatibility(cropType, animal.type);
 
-            if (canFeed) {
+            if (canFeed || (animalData && (animalData.requiresCorruptedFeed || animalData.requiresForbiddenFeed))) {
                 if (this.gameState.hasCrop(cropType)) {
                     const hasCropInventory = this.gameState.getCropCount(cropType, false) > 0;
                     const removed = this.gameState.removeCrop(cropType, 1, !hasCropInventory);
@@ -473,12 +504,24 @@ class LivestockModule {
                         animal.happiness = Math.min((animal.happiness || 50) + 15, 100);
                         fedSuccessfully = true;
                         bonusEffect = true;
+
+                        if (isCorruptedCrop) {
+                            if (!animalData || !animalData.isMutated) {
+                                animal.corruptionFeedCount = (animal.corruptionFeedCount || 0) + 1;
+                                this.eventBus.emit('livestock:info', {
+                                    message: `生物食用了腐败作物，正在缓慢发生变化...（已食用${animal.corruptionFeedCount}次）`
+                                });
+                            }
+                        }
                     }
                 }
             }
         }
 
-        if (!fedSuccessfully) {
+        if (!fedSuccessfully && !animalData) {
+            animal.hungry = false;
+            fedSuccessfully = true;
+        } else if (!fedSuccessfully && animalData && !animalData.requiresCorruptedFeed && !animalData.requiresForbiddenFeed) {
             animal.hungry = false;
             fedSuccessfully = true;
         }
@@ -490,7 +533,8 @@ class LivestockModule {
         this.eventBus.emit('livestock:animalFed', { 
             animalId, 
             cropType, 
-            bonusEffect 
+            bonusEffect,
+            isCorruptedCrop
         });
 
         return { success: true, bonusEffect };
@@ -697,6 +741,346 @@ class LivestockModule {
         if (savedData.maxWildAnimals !== undefined) {
             this.maxWildAnimals = savedData.maxWildAnimals;
         }
+    }
+
+    incrementAnimalDayCounter() {
+        const animals = this.gameState.getAnimals();
+        animals.forEach(animal => {
+            animal.dayCounter = (animal.dayCounter || 0) + 1;
+        });
+    }
+
+    checkAnimalMutation() {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animals = this.gameState.getAnimals();
+        
+        animals.forEach(animal => {
+            if (animal.isMutated) return;
+
+            const animalData = AnimalConfig.getDomesticAnimal ? 
+                AnimalConfig.getDomesticAnimal(animal.type) : null;
+
+            if (!animalData || !animalData.canMutate || !animalData.mutationTarget) return;
+
+            const corruptionFeedCount = animal.corruptionFeedCount || 0;
+            const mutationThreshold = 5;
+
+            if (corruptionFeedCount >= mutationThreshold) {
+                this.mutateAnimal(animal, animalData.mutationTarget);
+            }
+        });
+    }
+
+    mutateAnimal(animal, mutationTarget) {
+        const AnimalConfig = window.AnimalConfig || {};
+        const mutationData = AnimalConfig.getDomesticAnimal ? 
+            AnimalConfig.getDomesticAnimal(mutationTarget) : null;
+
+        if (!mutationData) return;
+
+        const oldType = animal.type;
+        const oldAnimalData = AnimalConfig.getDomesticAnimal ? 
+            AnimalConfig.getDomesticAnimal(oldType) : null;
+
+        animal.type = mutationTarget;
+        animal.isMutated = true;
+        animal.corruptionFeedCount = 0;
+
+        this.eventBus.emit('livestock:animalMutated', {
+            animalId: animal.id,
+            oldType,
+            oldTypeName: oldAnimalData ? oldAnimalData.name : oldType,
+            newType: mutationTarget,
+            newTypeName: mutationData.name
+        });
+
+        this.eventBus.emit('livestock:info', {
+            message: `生物发生了诡异的变异！从${oldAnimalData ? oldAnimalData.name : oldType}变为了${mutationData.name}！`
+        });
+
+        if (this.sanityModule && mutationData.sanityEffect && mutationData.sanityEffect < 0) {
+            this.sanityModule.modifySanity(
+                Math.min(mutationData.sanityEffect, -5), 
+                '目睹生物变异'
+            );
+        }
+    }
+
+    checkAnimalCalming() {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animals = this.gameState.getAnimals();
+        const currentDay = this.timeModule.getDay();
+
+        animals.forEach(animal => {
+            const animalData = AnimalConfig.getDomesticAnimal ? 
+                AnimalConfig.getDomesticAnimal(animal.type) : null;
+
+            if (!animalData || !animalData.requiresCalming) return;
+
+            const calmingIntervalDays = animalData.calmingIntervalDays || 10;
+            const dayCounter = animal.dayCounter || 0;
+
+            const lastCalmedAt = animal.lastCalmedAt;
+            const needsCalming = lastCalmedAt === null || 
+                (dayCounter - lastCalmedAt) >= calmingIntervalDays;
+
+            if (needsCalming && dayCounter > 0 && dayCounter % calmingIntervalDays === 0) {
+                this.eventBus.emit('livestock:needsCalming', {
+                    animalId: animal.id,
+                    animalType: animal.type,
+                    animalName: animalData.name
+                });
+            }
+
+            if (lastCalmedAt !== null && (dayCounter - lastCalmedAt) > calmingIntervalDays) {
+                const daysSinceCalming = dayCounter - lastCalmedAt;
+                const destructiveChance = Math.min(0.3 * (daysSinceCalming - calmingIntervalDays), 0.9);
+                
+                if (Math.random() < destructiveChance) {
+                    this.triggerAnimalDestructiveBehavior(animal, animalData);
+                }
+            }
+        });
+    }
+
+    calmAnimal(animalId, calmType = 'statue') {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animal = this.gameState.getAnimal(animalId);
+
+        if (!animal) {
+            return { success: false, reason: '动物不存在' };
+        }
+
+        const animalData = AnimalConfig.getDomesticAnimal ? 
+            AnimalConfig.getDomesticAnimal(animal.type) : null;
+
+        if (!animalData || !animalData.requiresCalming) {
+            return { success: false, reason: '该动物不需要安抚' };
+        }
+
+        animal.lastCalmedAt = animal.dayCounter || 0;
+
+        const calmTypeNames = {
+            statue: '古老雕像',
+            rune: '低语符文',
+            offering: '祭品投喂'
+        };
+
+        this.eventBus.emit('livestock:animalCalmed', {
+            animalId,
+            animalType: animal.type,
+            animalName: animalData.name,
+            calmType,
+            calmTypeName: calmTypeNames[calmType] || calmType
+        });
+
+        this.eventBus.emit('livestock:info', {
+            message: `使用${calmTypeNames[calmType] || calmType}安抚了${animalData.name}，它暂时平静下来了...`
+        });
+
+        if (this.sanityModule) {
+            this.sanityModule.modifySanity(1, '成功安抚诡秘生物');
+        }
+
+        return { success: true };
+    }
+
+    triggerAnimalDestructiveBehavior(animal, animalData) {
+        const FarmingModule = window.FarmingModule || null;
+        
+        this.eventBus.emit('livestock:animalDestructive', {
+            animalId: animal.id,
+            animalType: animal.type,
+            animalName: animalData.name
+        });
+
+        const behaviorRoll = Math.random();
+
+        if (behaviorRoll < 0.4) {
+            const fields = FarmingModule ? FarmingModule.getAllFields() : [];
+            const unlockedFields = fields.filter(f => f.unlocked && f.plant);
+            
+            if (unlockedFields.length > 0) {
+                const randomField = unlockedFields[Math.floor(Math.random() * unlockedFields.length)];
+                randomField.plant = null;
+                randomField.stage = 0;
+                randomField.growthProgress = 0;
+
+                this.eventBus.emit('livestock:info', {
+                    message: `${animalData.name}破坏了农田中的作物！`
+                });
+
+                if (this.sanityModule) {
+                    this.sanityModule.modifySanity(-3, '目睹生物破坏农田');
+                }
+            }
+        } else if (behaviorRoll < 0.7) {
+            this.eventBus.emit('livestock:info', {
+                message: `${animalData.name}在畜栏中疯狂躁动，损坏了一些物品...`
+            });
+
+            if (this.sanityModule) {
+                this.sanityModule.modifySanity(-2, '生物躁动不安');
+            }
+        } else {
+            this.eventBus.emit('livestock:info', {
+                message: `${animalData.name}发出诡异的声音，令人心神不宁...`
+            });
+
+            if (this.sanityModule) {
+                this.sanityModule.modifySanity(-5, '生物诡异低语');
+            }
+        }
+    }
+
+    processPhantasmalHourlySanityLoss() {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animals = this.gameState.getAnimals();
+
+        animals.forEach(animal => {
+            const animalData = AnimalConfig.getDomesticAnimal ? 
+                AnimalConfig.getDomesticAnimal(animal.type) : null;
+
+            if (!animalData || !animalData.isPhantasmal) return;
+
+            if (animalData.dailySanityLoss && this.sanityModule) {
+                const hourlyLoss = animalData.dailySanityLoss / 24;
+                this.sanityModule.modifySanity(-hourlyLoss, '禁忌幻兽存在');
+            }
+        });
+    }
+
+    checkPhantasmalEscape() {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animals = this.gameState.getAnimals();
+
+        animals.forEach(animal => {
+            if (animal.hasEscaped) return;
+
+            const animalData = AnimalConfig.getDomesticAnimal ? 
+                AnimalConfig.getDomesticAnimal(animal.type) : null;
+
+            if (!animalData || !animalData.isPhantasmal) return;
+
+            const escapeIntervalDays = animalData.escapeIntervalDays || 10;
+            const dayCounter = animal.dayCounter || 0;
+
+            if (dayCounter > 0 && dayCounter % escapeIntervalDays === 0) {
+                const escapeChance = animalData.escapeChance || 0.05;
+
+                if (Math.random() < escapeChance) {
+                    this.triggerPhantasmalEscape(animal, animalData);
+                }
+            }
+        });
+    }
+
+    triggerPhantasmalEscape(animal, animalData) {
+        animal.hasEscaped = true;
+
+        this.eventBus.emit('livestock:phantasmalEscaped', {
+            animalId: animal.id,
+            animalType: animal.type,
+            animalName: animalData.name
+        });
+
+        this.eventBus.emit('livestock:info', {
+            message: `禁忌幻兽${animalData.name}打破了束缚，逃入了未知空间...它引发了灾难！`
+        });
+
+        if (this.sanityModule) {
+            this.sanityModule.modifySanity(-20, '禁忌幻兽出逃灾难');
+        }
+
+        const FarmingModule = window.FarmingModule || null;
+        if (FarmingModule) {
+            const fields = FarmingModule.getAllFields();
+            const unlockedFields = fields.filter(f => f.unlocked);
+            
+            unlockedFields.forEach(field => {
+                if (Math.random() < 0.3) {
+                    if (field.plant) {
+                        field.plant = null;
+                        field.stage = 0;
+                        field.growthProgress = 0;
+                    }
+                }
+            });
+
+            this.eventBus.emit('livestock:info', {
+                message: '幻兽出逃引发的能量波动破坏了部分农田...'
+            });
+        }
+
+        this.gameState.removeAnimal(animal.id);
+
+        this.eventBus.emit('livestock:animalRemoved', {
+            animalId: animal.id,
+            reason: 'escaped',
+            animalName: animalData.name
+        });
+    }
+
+    processPollutionFromCorruptedBarn() {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animals = this.gameState.getAnimals();
+
+        let corruptedAnimalCount = 0;
+
+        animals.forEach(animal => {
+            const animalData = AnimalConfig.getDomesticAnimal ? 
+                AnimalConfig.getDomesticAnimal(animal.type) : null;
+
+            if (animalData && (animalData.isMutated || animalData.isPhantasmal || animalData.tier === 'small_eldritch' || animalData.tier === 'medium_servitor')) {
+                corruptedAnimalCount++;
+            }
+        });
+
+        if (corruptedAnimalCount > 0 && this.pollutionModule) {
+            const pollutionIncrease = corruptedAnimalCount * 0.5;
+            this.pollutionModule.modifyPollution(pollutionIncrease, '污染畜栏');
+        }
+    }
+
+    getAllMutatedAnimals() {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animals = this.gameState.getAnimals();
+        
+        return animals.filter(animal => {
+            const animalData = AnimalConfig.getDomesticAnimal ? 
+                AnimalConfig.getDomesticAnimal(animal.type) : null;
+            return animal.isMutated || (animalData && animalData.isMutated);
+        });
+    }
+
+    getAllEldritchAnimals() {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animals = this.gameState.getAnimals();
+        
+        return animals.filter(animal => {
+            const animalData = AnimalConfig.getDomesticAnimal ? 
+                AnimalConfig.getDomesticAnimal(animal.type) : null;
+            return animalData && (animalData.tier === 'small_eldritch' || animalData.tier === 'medium_servitor' || animalData.tier === 'old_one');
+        });
+    }
+
+    getAnimalsNeedingCalming() {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animals = this.gameState.getAnimals();
+        const currentDay = this.timeModule.getDay();
+
+        return animals.filter(animal => {
+            const animalData = AnimalConfig.getDomesticAnimal ? 
+                AnimalConfig.getDomesticAnimal(animal.type) : null;
+
+            if (!animalData || !animalData.requiresCalming) return false;
+
+            const calmingIntervalDays = animalData.calmingIntervalDays || 10;
+            const lastCalmedAt = animal.lastCalmedAt;
+            const dayCounter = animal.dayCounter || 0;
+
+            return lastCalmedAt === null || (dayCounter - lastCalmedAt) >= calmingIntervalDays;
+        });
     }
 }
 
