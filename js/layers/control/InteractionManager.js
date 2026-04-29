@@ -145,6 +145,13 @@ class InteractionManager {
             this.handleSeedSelect(seedType);
         });
 
+        this.eventBus.on('ui:seedCleared', () => {
+            if (this.farmingModule) {
+                this.farmingModule.clearSelectedSeed();
+                this.uiRenderer.showInfo('已取消种子选择。');
+            }
+        });
+
         this.eventBus.on('ui:buySeed', (seedType) => {
             this.handleBuySeed(seedType);
         });

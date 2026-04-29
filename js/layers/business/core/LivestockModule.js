@@ -137,6 +137,10 @@ class LivestockModule {
             this.sellAnimal(data.animalId);
         });
 
+        this.eventBus.on('ui:releaseAnimal', (data) => {
+            this.releaseAnimal(data.animalId);
+        });
+
         this.eventBus.on('ui:upgradeBarn', () => {
             this.upgradeBarn();
         });
@@ -582,6 +586,26 @@ class LivestockModule {
         });
 
         return { success: true, value };
+    }
+
+    releaseAnimal(animalId) {
+        const AnimalConfig = window.AnimalConfig || {};
+        const animal = this.gameState.getAnimal(animalId);
+        
+        if (!animal) {
+            this.eventBus.emit('livestock:releaseFailed', { reason: '动物不存在' });
+            return { success: false, reason: '动物不存在' };
+        }
+
+        this.gameState.removeAnimal(animalId);
+
+        this.eventBus.emit('livestock:animalReleased', {
+            animalId,
+            animalType: animal.type,
+            animalName: animal.name || animal.type
+        });
+
+        return { success: true };
     }
 
     upgradeBarn() {

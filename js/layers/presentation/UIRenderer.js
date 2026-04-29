@@ -234,6 +234,20 @@ class UIRenderer {
             this.showInfo(`${data.productName}×${data.amount}`, 'success');
         });
 
+        this.eventBus.on('livestock:animalSold', (data) => {
+            this.showInfo(`出售了${data.animalType}，获得${data.value}金币`, 'success');
+            this.renderBarn();
+        });
+
+        this.eventBus.on('livestock:animalReleased', (data) => {
+            this.showInfo(`${data.animalName}已被放生回野外`, 'info');
+            this.renderBarn();
+        });
+
+        this.eventBus.on('livestock:releaseFailed', (data) => {
+            this.showInfo(`放生失败：${data.reason}`, 'warning');
+        });
+
         this.eventBus.on('livestock:barnUpgraded', (data) => {
             this.showInfo(`畜栏升级成功！容量提升到${data.capacity}`, 'success');
             this.renderBarnInfo();
@@ -316,12 +330,38 @@ class UIRenderer {
 
         this.eventBus.on('exploration:completed', (data) => {
             this.hideExplorationProgress();
+            const PlantConfig = window.PlantConfig || {};
+            const ExplorationConfig = window.ExplorationConfig || {};
+            
             const rewardTexts = [];
-            if (data.rewards.money > 0) rewardTexts.push(`${data.rewards.money}金币`);
-            if (data.rewards.seeds.length > 0) rewardTexts.push('种子');
-            if (data.rewards.items.length > 0) rewardTexts.push('物品');
-            if (data.rewards.artifacts.length > 0) rewardTexts.push('文物');
-            this.showInfo(`探索${data.regionName}完成！获得：${rewardTexts.join('、')}`, 'success');
+            if (data.rewards.money > 0) {
+                rewardTexts.push(`${data.rewards.money}金币`);
+            }
+            
+            if (data.rewards.seeds.length > 0) {
+                const seedTexts = data.rewards.seeds.map(seed => {
+                    const seedData = PlantConfig.getPlant ? PlantConfig.getPlant(seed.id) : PlantConfig[seed.id];
+                    const seedName = seedData ? seedData.name : seed.id;
+                    return `${seedName}×${seed.count}`;
+                });
+                rewardTexts.push(`种子: ${seedTexts.join(', ')}`);
+            }
+            
+            if (data.rewards.items.length > 0) {
+                const itemTexts = data.rewards.items.map(item => {
+                    const itemData = ExplorationConfig.getItem ? ExplorationConfig.getItem(item.id) : null;
+                    const itemName = itemData ? itemData.name : item.id;
+                    return `${itemName}×${item.count}`;
+                });
+                rewardTexts.push(`物品: ${itemTexts.join(', ')}`);
+            }
+            
+            if (data.rewards.artifacts.length > 0) {
+                const artifactTexts = data.rewards.artifacts.map(artifact => artifact.name);
+                rewardTexts.push(`文物: ${artifactTexts.join(', ')}`);
+            }
+            
+            this.showInfo(`探索${data.regionName}完成！获得：${rewardTexts.join('；')}`, 'success');
             this.renderExplorationContent(this.currentExplorationTab);
         });
 
@@ -577,9 +617,8 @@ class UIRenderer {
                     ${isReady ? 
                         `<button class="collect-btn" data-collect-id="${animal.id}">收集</button>` : 
                         ''}
-                    ${isHungry ? 
-                        `<button class="feed-btn" data-feed-id="${animal.id}">喂食</button>` : 
-                        ''}
+                    <button class="feed-btn" data-feed-id="${animal.id}">${isHungry ? '喂食' : '查看饲料'}</button>
+                    <button class="release-btn" data-release-id="${animal.id}">放生</button>
                     <button class="sell-btn" data-sell-id="${animal.id}">出售</button>
                 </div>
             `;
@@ -594,14 +633,20 @@ class UIRenderer {
                 }
             }
             
-            if (isHungry) {
-                const feedBtn = animalElement.querySelector('.feed-btn');
-                if (feedBtn) {
-                    feedBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.showFeedSelection(animal.id, animal.type, animal.name || animal.type);
-                    });
-                }
+            const feedBtn = animalElement.querySelector('.feed-btn');
+            if (feedBtn) {
+                feedBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showFeedSelection(animal.id, animal.type, animal.name || animal.type);
+                });
+            }
+
+            const releaseBtn = animalElement.querySelector('.release-btn');
+            if (releaseBtn) {
+                releaseBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.showReleaseConfirmation(animal.id, animal.type, animal.name || animal.type);
+                });
             }
 
             const sellBtn = animalElement.querySelector('.sell-btn');
@@ -613,6 +658,52 @@ class UIRenderer {
             }
             
             this.barnContainer.appendChild(animalElement);
+        });
+    }
+
+    showReleaseConfirmation(animalId, animalType, animalName) {
+        const existingModal = document.getElementById('release-confirmation-modal');
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'release-confirmation-modal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>放生 ${animalName}</h2>
+                    <button class="close-btn" id="close-release-modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 1.5rem; color: var(--ash-gray);">确定要将 ${animalName} 放生回野外吗？</p>
+                    <p style="margin-bottom: 1.5rem; color: var(--algae-red); font-size: 0.9rem;">⚠️ 放生后将无法再找回这只动物</p>
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <button class="action-btn cancel-release-btn" style="background-color: var(--moss-green);">取消</button>
+                        <button class="action-btn confirm-release-btn" style="background-color: var(--algae-red);">确认放生</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        document.getElementById('close-release-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.querySelector('.cancel-release-btn').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.querySelector('.confirm-release-btn').addEventListener('click', () => {
+            this.eventBus.emit('ui:releaseAnimal', { animalId: animalId });
+            modal.remove();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
         });
     }
 
@@ -864,11 +955,18 @@ class UIRenderer {
                 }
 
                 card.addEventListener('click', () => {
-                    document.querySelectorAll('.item-card.selected').forEach(el => {
-                        el.classList.remove('selected');
-                    });
-                    card.classList.add('selected');
-                    this.eventBus.emit('ui:seedSelected', seed.type);
+                    const isAlreadySelected = card.classList.contains('selected');
+                    
+                    if (isAlreadySelected) {
+                        card.classList.remove('selected');
+                        this.eventBus.emit('ui:seedCleared');
+                    } else {
+                        document.querySelectorAll('.item-card.selected').forEach(el => {
+                            el.classList.remove('selected');
+                        });
+                        card.classList.add('selected');
+                        this.eventBus.emit('ui:seedSelected', seed.type);
+                    }
                 });
                 
                 this.backpackContent.appendChild(card);

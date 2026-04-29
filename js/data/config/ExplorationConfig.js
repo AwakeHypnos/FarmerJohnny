@@ -15,6 +15,163 @@ const ExplorationConfig = {
     ITEM_TYPE_ARTIFACT: 'artifact',
     ITEM_TYPE_TOME: 'tome',
 
+    _items: {
+        old_key: {
+            id: 'old_key',
+            name: '古老钥匙',
+            description: '一把锈迹斑斑的古老钥匙，可能能打开某个尘封的门',
+            icon: '🗝️',
+            rarity: 'common'
+        },
+        rusted_scythe: {
+            id: 'rusted_scythe',
+            name: '锈蚀镰刀',
+            description: '废弃农场留下的农具，被时间侵蚀',
+            icon: '🔧',
+            rarity: 'common'
+        },
+        rotting_wood: {
+            id: 'rotting_wood',
+            name: '腐朽木材',
+            description: '从腐烂森林中收集的奇异木材，散发着奇怪的气味',
+            icon: '🪵',
+            rarity: 'common'
+        },
+        mycelium: {
+            id: 'mycelium',
+            name: '菌丝体',
+            description: '从腐烂森林采集的神秘菌丝，具有奇异的特性',
+            icon: '🍄',
+            rarity: 'uncommon'
+        },
+        swamp_moss: {
+            id: 'swamp_moss',
+            name: '沼泽苔藓',
+            description: '从诡异沼泽中采集的湿滑苔藓',
+            icon: '🌿',
+            rarity: 'common'
+        },
+        fish_bone: {
+            id: 'fish_bone',
+            name: '鱼骨',
+            description: '沼泽中发现的奇异鱼骨，不知属于什么生物',
+            icon: '🦴',
+            rarity: 'common'
+        },
+        stone_fragment: {
+            id: 'stone_fragment',
+            name: '石碑碎片',
+            description: '从远古石碑群脱落的碎片，上面刻有模糊的符文',
+            icon: '🗿',
+            rarity: 'uncommon'
+        },
+        ancient_dust: {
+            id: 'ancient_dust',
+            name: '远古尘埃',
+            description: '积累千年的神秘尘埃，蕴含着古老的力量',
+            icon: '✨',
+            rarity: 'uncommon'
+        },
+        ritual_dagger: {
+            id: 'ritual_dagger',
+            name: '仪式匕首',
+            description: '邪教徒用于仪式的匕首，残留着诡异的气息',
+            icon: '🗡️',
+            rarity: 'rare'
+        },
+        candle_stub: {
+            id: 'candle_stub',
+            name: '蜡烛残根',
+            description: '仪式现场残留的蜡烛，似乎还能闻到蜡油的气味',
+            icon: '🕯️',
+            rarity: 'common'
+        },
+        deep_sea_pearl: {
+            id: 'deep_sea_pearl',
+            name: '深海珍珠',
+            description: '来自深海滩涂的奇异珍珠，散发着幽暗的光芒',
+            icon: '🔮',
+            rarity: 'rare'
+        },
+        fish_scales: {
+            id: 'fish_scales',
+            name: '鱼鳞',
+            description: '从深海生物身上脱落的鳞片，闪烁着诡异的光泽',
+            icon: '🐟',
+            rarity: 'uncommon'
+        },
+        crystal_shard: {
+            id: 'crystal_shard',
+            name: '水晶碎片',
+            description: '在地底洞穴中发现的发光水晶碎片',
+            icon: '💎',
+            rarity: 'rare'
+        },
+        cave_moss: {
+            id: 'cave_moss',
+            name: '洞穴苔藓',
+            description: '生长在黑暗洞穴中的奇异苔藓，能够发出微弱的光',
+            icon: '🌱',
+            rarity: 'uncommon'
+        },
+        stardust: {
+            id: 'stardust',
+            name: '星尘',
+            description: '从星界裂隙中逸出的神秘尘埃，闪烁着星辰的光芒',
+            icon: '⭐',
+            rarity: 'epic'
+        },
+        void_essence: {
+            id: 'void_essence',
+            name: '虚空精华',
+            description: '来自虚空的神秘物质，蕴含着不可名状的力量',
+            icon: '🌀',
+            rarity: 'epic'
+        },
+        idol_fragment: {
+            id: 'idol_fragment',
+            name: '神像碎片',
+            description: '旧日神殿中破碎神像的残片，散发着令人不安的气息',
+            icon: '🗿',
+            rarity: 'epic'
+        },
+        ancient_ink: {
+            id: 'ancient_ink',
+            name: '远古墨水',
+            description: '用于撰写禁忌知识的神秘墨水，颜色深邃如夜',
+            icon: '🖋️',
+            rarity: 'rare'
+        },
+        beast_bone: {
+            id: 'beast_bone',
+            name: '巨兽骨骼',
+            description: '沉睡巨兽残骸中发现的巨大骨骼，坚硬如铁',
+            icon: '🦴',
+            rarity: 'epic'
+        },
+        ichor_sample: {
+            id: 'ichor_sample',
+            name: '体液样本',
+            description: '从远古巨兽身上采集的奇异体液，散发着腥甜的气味',
+            icon: '🩸',
+            rarity: 'epic'
+        },
+        alien_metal: {
+            id: 'alien_metal',
+            name: '异星金属',
+            description: '来自无名古城的神秘金属，来自遥远的星空',
+            icon: '⚙️',
+            rarity: 'legendary'
+        },
+        unknown_mineral: {
+            id: 'unknown_mineral',
+            name: '未知矿物',
+            description: '无名古城中发现的奇异矿物，性质未知',
+            icon: '💎',
+            rarity: 'legendary'
+        }
+    },
+
     _regions: {
         abandoned_farm: {
             id: 'abandoned_farm',
@@ -854,6 +1011,14 @@ const ExplorationConfig = {
             }
         }
         return true;
+    },
+
+    getItem(itemId) {
+        return this._items[itemId];
+    },
+
+    getAllItems() {
+        return Object.values(this._items);
     }
 };
 
