@@ -576,7 +576,7 @@ class FarmingModule {
             }
 
             if (plantData.pollutionGainOnHarvest && this.pollutionModule) {
-                this.pollutionModule.addPollution(plantData.pollutionGainOnHarvest);
+                this.pollutionModule.modifyPollution(plantData.pollutionGainOnHarvest, '收获作物');
             }
 
             if (plantData.harvestCurses && plantData.harvestCurses.length > 0) {
@@ -597,7 +597,7 @@ class FarmingModule {
                 this.triggerAwarenessEvent(fieldId, field.awarenessType, plantData);
             }
 
-            if (plantData.tier === 'aberrant') {
+            if (plantData.tier === 'aberrant' && field.fieldType === this.FIELD_NORMAL) {
                 field.aberrantPlantCount++;
                 this.checkFieldCorruption(fieldId);
             }
@@ -622,8 +622,6 @@ class FarmingModule {
         field.stage = 0;
         field.growthProgress = 0;
         field.watered = false;
-        field.fertilized = false;
-        field.fertilizerType = null;
         field.hasAwareness = false;
         field.awarenessType = null;
 
@@ -1403,7 +1401,7 @@ class FarmingModule {
             }
 
             if (plantData.pollutionGainOnHarvest && this.pollutionModule) {
-                this.pollutionModule.addPollution(plantData.pollutionGainOnHarvest);
+                this.pollutionModule.modifyPollution(plantData.pollutionGainOnHarvest, '收获作物');
             }
 
             if (plantData.harvestCurses && plantData.harvestCurses.length > 0) {
@@ -1441,8 +1439,6 @@ class FarmingModule {
         pond.plant = null;
         pond.stage = 0;
         pond.growthProgress = 0;
-        pond.fertilized = false;
-        pond.fertilizerType = null;
         pond.hasAwareness = false;
         pond.awarenessType = null;
         pond.watered = true;

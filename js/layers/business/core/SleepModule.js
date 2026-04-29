@@ -32,7 +32,7 @@ class SleepModule {
 
     canSleep() {
         const hour = this.timeModule.getHour();
-        return hour >= 20 || hour < 6;
+        return hour >= 18 || hour < 6;
     }
 
     getAvailableSleepHours() {
